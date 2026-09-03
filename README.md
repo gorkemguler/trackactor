@@ -57,6 +57,10 @@ same key and resolve to the case.
 
 ![Messages](docs/screenshots/messages.png)
 
+**Settings** — API keys and signed outbound webhooks for your automation.
+
+![Settings](docs/screenshots/settings.png)
+
 ## How it fits together
 
 - **Case** — a tracked engagement, keyed by your external `case_id` and its
@@ -113,7 +117,9 @@ The dev server runs on http://localhost:5173 and proxies `/api` to port 8000.
 
 ## API
 
-No auth. Everything lives under `/api`; the full schema is at `/api/docs`.
+Everything lives under `/api`; the full schema is at `/api/docs`. Auth is off by
+default (see [Configuration](#configuration)); integration recipes are in
+[docs/integrations](docs/integrations/README.md).
 
 ```bash
 # create a case
@@ -141,6 +147,8 @@ curl 'localhost:8000/api/lookup?q=https://t.me/n3tw0rm_deals'
 | `POST` | `/api/actors/{id}/contacts` | add a channel to an actor |
 | `GET` `POST` | `/api/contacts` | search communication identifiers |
 | `GET` | `/api/stats` | dashboard counters |
+| `GET` `POST` `DELETE` | `/api/keys` | manage API keys (admin-guarded) |
+| `GET` `POST` `PATCH` `DELETE` | `/api/webhooks` | manage outbound webhooks (admin-guarded) |
 
 List endpoints (`/api/cases`, `/api/actors`, `/api/contacts`, `/api/interactions`)
 return `{ items, total, limit, offset }` and take `limit` (max 200) and `offset`.
@@ -162,6 +170,13 @@ page. See [extension/README.md](extension/README.md).
 
 - `TRACKACTOR_DB_URL` — SQLAlchemy URL, default `sqlite:///./trackactor.db`
 - `TRACKACTOR_CORS_ORIGINS` — comma-separated origins allowed to call the API in local dev
+- `TRACKACTOR_REQUIRE_KEY` — when `true`, every `/api` call needs an `X-API-Key`; writes need a `write`-scoped key (default `false`)
+- `TRACKACTOR_ADMIN_TOKEN` — guards `/api/keys` and `/api/webhooks`; empty means those routes are open
+
+Manage keys and webhooks from **Settings** in the UI, or the endpoints above.
+Webhooks POST `interaction.inbound`, `interaction.outbound`,
+`case.status_changed` and `case.created`, signed with your secret in
+`X-Trackactor-Signature` and retried three times.
 
 ## Stack
 
@@ -170,8 +185,10 @@ frontend. Run the backend tests with `cd backend && pytest`.
 
 ## Notes
 
-- No authentication. Run it on an internal network or behind your own auth proxy.
+- Authentication is opt-in and coarse (one key = one scope). For anything
+  serious, still run it on an internal network or behind your own proxy.
 - SQLite is fine for a team. Point `TRACKACTOR_DB_URL` at Postgres if you outgrow it.
+- No schema migrations yet — a new column means recreating the SQLite file.
 
 ## License
 

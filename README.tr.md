@@ -57,6 +57,10 @@ olur ve aynı vakaya çıkar.
 
 ![Mesajlar](docs/screenshots/messages.png)
 
+**Ayarlar** — otomasyonun için API key'leri ve imzalı giden webhook'lar.
+
+![Ayarlar](docs/screenshots/settings.png)
+
 ## Parçalar nasıl birleşiyor
 
 - **Case (Vaka)** — takip edilen bir tema; dış `case_id`'niz ve kaynak
@@ -116,7 +120,9 @@ portuna proxy'ler.
 
 ## API
 
-Kimlik doğrulama yok. Her şey `/api` altında; tam şema `/api/docs` adresinde.
+Her şey `/api` altında; tam şema `/api/docs` adresinde. Kimlik doğrulama
+varsayılan olarak kapalı (bkz. [Yapılandırma](#yap%C4%B1land%C4%B1rma)); entegrasyon
+örnekleri [docs/integrations](docs/integrations/README.md) içinde.
 
 ```bash
 # vaka oluştur
@@ -144,6 +150,8 @@ curl 'localhost:8000/api/lookup?q=https://t.me/n3tw0rm_deals'
 | `POST` | `/api/actors/{id}/contacts` | bir aktöre kanal ekle |
 | `GET` `POST` | `/api/contacts` | iletişim kimliklerinde ara |
 | `GET` | `/api/stats` | panel sayaçları |
+| `GET` `POST` `DELETE` | `/api/keys` | API key yönetimi (admin korumalı) |
+| `GET` `POST` `PATCH` `DELETE` | `/api/webhooks` | giden webhook yönetimi (admin korumalı) |
 
 Liste uçları (`/api/cases`, `/api/actors`, `/api/contacts`, `/api/interactions`)
 `{ items, total, limit, offset }` döndürür; `limit` (en fazla 200) ve `offset` alır.
@@ -165,6 +173,13 @@ vakaya işler. Bkz. [extension/README.md](extension/README.md).
 
 - `TRACKACTOR_DB_URL` — SQLAlchemy URL'i, varsayılan `sqlite:///./trackactor.db`
 - `TRACKACTOR_CORS_ORIGINS` — yerel geliştirmede API'yi çağırmasına izin verilen origin'ler (virgülle ayrılmış)
+- `TRACKACTOR_REQUIRE_KEY` — `true` iken her `/api` çağrısı `X-API-Key` ister; yazma işlemleri `write` kapsamlı key ister (varsayılan `false`)
+- `TRACKACTOR_ADMIN_TOKEN` — `/api/keys` ve `/api/webhooks`'u korur; boşsa bu uçlar açık
+
+Key'ler ve webhook'lar arayüzde **Ayarlar**'dan ya da yukarıdaki uçlardan
+yönetilir. Webhook'lar `interaction.inbound`, `interaction.outbound`,
+`case.status_changed`, `case.created` olaylarını gizli anahtarınla imzalayıp
+(`X-Trackactor-Signature`) POST eder, üç kez dener.
 
 ## Teknoloji
 
@@ -173,8 +188,10 @@ Backend testleri: `cd backend && pytest`.
 
 ## Notlar
 
-- Kimlik doğrulama yok. İç ağda ya da kendi auth proxy'nin arkasında çalıştır.
+- Kimlik doğrulama opsiyonel ve kaba (bir key = bir kapsam). Ciddi bir kurulumda
+  yine iç ağda ya da kendi proxy'nin arkasında çalıştır.
 - SQLite bir ekip için yeterli. Büyürsen `TRACKACTOR_DB_URL`'i Postgres'e yönlendir.
+- Henüz şema migration'ı yok — yeni bir kolon SQLite dosyasını yeniden oluşturmayı gerektirir.
 
 ## Lisans
 
