@@ -1,0 +1,24 @@
+services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      TRACKACTOR_DB_URL: sqlite:////data/trackactor.db
+    volumes:
+      - trackactor-data:/data
+    expose:
+      - "8000"
+    # uncomment to hit the API directly from the host
+    # ports:
+    #   - "8000:8000"
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  trackactor-data:

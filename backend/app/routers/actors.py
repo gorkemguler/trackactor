@@ -1,0 +1,133 @@
+"""/api/actors — threat actors and their aliases."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
+from sqlalchemy.orm import Session, selectinload
+
+from .. import models, schemas
+from ..database import get_db
+from ..normalize import normalize_identifier
+from ..serializers import actor_detail, contact_out
+
+router = APIRouter(prefix="/api/actors", tags=["actors"])
+
+
+def _get_actor(db: Session, actor_id: int) -> models.Actor:
+    actor = db.get(
+        models.Actor,
+        actor_id,
+        options=[selectinload(models.Actor.contacts), selectinload(models.Actor.case_links).selectinload(models.CaseActor.case)],
+    )
+    if actor is None:
+        raise HTTPException(status_code=404, detail="Actor not found")
+    return actor
+
+
+@router.get("", response_model=list[schemas.ActorDetail])
+def list_actors(
+    q: str | None = Query(default=None, description="filter by name / alias substring"),
+    actor_type: str | None = None,
+    db: Session = Depends(get_db),
+):
+    stmt = select(models.Actor).options(
+        selectinload(models.Actor.contacts),
+        selectinload(models.Actor.case_links).selectinload(models.CaseActor.case),
+    )
+    if actor_type:
+        stmt = stmt.where(models.Actor.actor_type == actor_type)
+    stmt = stmt.order_by(models.Actor.name)
+    actors = db.scalars(stmt).unique().all()
+
+    # aliases live in a JSON column, so filter name/alias in Python
+    if q:
+        ql = q.lower()
+        actors = [
+            a
+            for a in actors
+            if ql in a.name.lower()
+            or any(ql in (al or "").lower() for al in (a.aliases or []))
+        ]
+    return [actor_detail(a) for a in actors]
+
+
+@router.post("", response_model=schemas.ActorDetail, status_code=201)
+def create_actor(payload: schemas.ActorCreate, db: Session = Depends(get_db)):
+    if db.scalar(select(models.Actor).where(models.Actor.name == payload.name)):
+        raise HTTPException(status_code=409, detail="An actor with that name already exists")
+
+    actor = models.Actor(
+        name=payload.name,
+        actor_type=payload.actor_type,
+        aliases=payload.aliases,
+        description=payload.description,
+        tlp=payload.tlp,
+        first_seen=payload.first_seen,
+        last_seen=payload.last_seen,
+    )
+    for c in payload.contacts:
+        actor.contacts.append(
+            models.Contact(
+                channel_type=c.channel_type,
+                value=c.value,
+                normalized=normalize_identifier(c.value),
+                label=c.label,
+                is_active=c.is_active,
+                notes=c.notes,
+            )
+        )
+    db.add(actor)
+    db.commit()
+    db.refresh(actor)
+    return actor_detail(_get_actor(db, actor.id))
+
+
+@router.get("/{actor_id}", response_model=schemas.ActorDetail)
+def get_actor(actor_id: int, db: Session = Depends(get_db)):
+    return actor_detail(_get_actor(db, actor_id))
+
+
+@router.patch("/{actor_id}", response_model=schemas.ActorDetail)
+def update_actor(actor_id: int, payload: schemas.ActorUpdate, db: Session = Depends(get_db)):
+    actor = _get_actor(db, actor_id)
+    data = payload.model_dump(exclude_unset=True)
+    if "name" in data and data["name"] != actor.name:
+        if db.scalar(select(models.Actor).where(models.Actor.name == data["name"])):
+            raise HTTPException(status_code=409, detail="An actor with that name already exists")
+    for key, value in data.items():
+        setattr(actor, key, value)
+    db.commit()
+    return actor_detail(_get_actor(db, actor_id))
+
+
+@router.delete("/{actor_id}", status_code=204)
+def delete_actor(actor_id: int, db: Session = Depends(get_db)):
+    actor = db.get(models.Actor, actor_id)
+    if actor is None:
+        raise HTTPException(status_code=404, detail="Actor not found")
+    db.delete(actor)
+    db.commit()
+
+
+# --- nested contacts ---------------------------------------------------
+
+
+@router.post("/{actor_id}/contacts", response_model=schemas.ContactOut, status_code=201)
+def add_contact(actor_id: int, payload: schemas.ContactBase, db: Session = Depends(get_db)):
+    actor = db.get(models.Actor, actor_id)
+    if actor is None:
+        raise HTTPException(status_code=404, detail="Actor not found")
+    contact = models.Contact(
+        actor_id=actor_id,
+        channel_type=payload.channel_type,
+        value=payload.value,
+        normalized=normalize_identifier(payload.value),
+        label=payload.label,
+        is_active=payload.is_active,
+        notes=payload.notes,
+    )
+    db.add(contact)
+    db.commit()
+    db.refresh(contact)
+    return contact_out(contact)
