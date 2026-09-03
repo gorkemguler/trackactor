@@ -156,3 +156,28 @@ export interface Stats {
   cases_without_interaction: number;
   recent_inbound: Interaction[];
 }
+
+export interface ApiKey {
+  id: number;
+  label: string;
+  prefix: string;
+  scope: string;
+  revoked: boolean;
+  last_used_at: string | null;
+  created_at: string;
+}
+
+export interface ApiKeyCreated extends ApiKey {
+  key: string;
+}
+
+export interface Webhook {
+  id: number;
+  url: string;
+  events: string[];
+  active: boolean;
+  last_status: number | null;
+  last_attempt_at: string | null;
+  failure_count: number;
+  created_at: string;
+}

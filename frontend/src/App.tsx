@@ -9,6 +9,7 @@ import CaseDetailPage from "./pages/CaseDetailPage";
 import ActorsPage from "./pages/ActorsPage";
 import ActorDetailPage from "./pages/ActorDetailPage";
 import MessagesPage from "./pages/MessagesPage";
+import SettingsPage from "./pages/SettingsPage";
 
 const FALLBACK: Enums = {
   actor_types: ["unknown"],
@@ -47,8 +48,11 @@ export default function App() {
             ✉ Messages
           </NavLink>
           <div className="spacer" />
+          <NavLink to="/settings" className="nav-link">
+            ⚙ Settings
+          </NavLink>
           <a className="nav-link" href="/api/docs" target="_blank" rel="noreferrer">
-            ⚙ API docs
+            ↗ API docs
           </a>
         </nav>
         <main className="main">
@@ -61,6 +65,7 @@ export default function App() {
             <Route path="/actors" element={<ActorsPage />} />
             <Route path="/actors/:id" element={<ActorDetailPage />} />
             <Route path="/messages" element={<MessagesPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<div className="empty">Not found</div>} />
           </Routes>
         </main>

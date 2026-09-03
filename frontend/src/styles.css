@@ -472,3 +472,33 @@ textarea {
 .hit-card.partial {
   border-left-color: var(--amber);
 }
+
+.msg-ok {
+  border: 1px solid #23422b;
+  background: #10251633;
+  color: var(--green);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 10px 0;
+}
+.key-reveal {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 4px 8px;
+  user-select: all;
+  word-break: break-all;
+}
+.chk {
+  font-size: 12px;
+  color: var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.chk input {
+  width: auto;
+}

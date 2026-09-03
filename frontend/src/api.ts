@@ -10,11 +10,22 @@ export class ApiError extends Error {
   }
 }
 
+export const ADMIN_TOKEN_KEY = "trackactor_admin_token";
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    ...options,
-  });
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...((options.headers as Record<string, string>) || {}),
+  };
+  let adminToken = "";
+  try {
+    adminToken = localStorage.getItem(ADMIN_TOKEN_KEY) ?? "";
+  } catch {
+    /* storage unavailable */
+  }
+  if (adminToken) headers["X-Admin-Token"] = adminToken;
+
+  const res = await fetch(`${BASE}${path}`, { ...options, headers });
   if (!res.ok) {
     let detail = res.statusText;
     try {
