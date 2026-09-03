@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, useApi } from "../api";
 import { useEnums } from "../App";
-import type { Actor, CaseDetail, Contact } from "../types";
+import type { Actor, CaseDetail, Contact, Page } from "../types";
 import {
   Badge,
   ErrorNote,
@@ -17,8 +17,8 @@ export default function CaseDetailPage() {
   const nav = useNavigate();
   const enums = useEnums();
   const { data: c, error, refetch } = useApi<CaseDetail>(`/cases/${id}`, [id]);
-  const { data: actors } = useApi<Actor[]>("/actors");
-  const { data: contacts } = useApi<Contact[]>("/contacts");
+  const { data: actors } = useApi<Page<Actor>>("/actors?limit=200");
+  const { data: contacts } = useApi<Page<Contact>>("/contacts?limit=200");
 
   const [busyErr, setBusyErr] = useState<string | null>(null);
   const [showLink, setShowLink] = useState(false);
@@ -216,8 +216,8 @@ export default function CaseDetailPage() {
       {showLink && (
         <LinkModal
           caseId={Number(id)}
-          actors={actors ?? []}
-          contacts={contacts ?? []}
+          actors={actors?.items ?? []}
+          contacts={contacts?.items ?? []}
           onClose={() => setShowLink(false)}
           onDone={() => {
             setShowLink(false);

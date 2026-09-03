@@ -126,3 +126,40 @@ export function ErrorNote({ error }: { error: string | null }) {
   if (!error) return null;
   return <div className="err">{error}</div>;
 }
+
+export function Pager({
+  total,
+  limit,
+  offset,
+  onOffset,
+}: {
+  total: number;
+  limit: number;
+  offset: number;
+  onOffset: (next: number) => void;
+}) {
+  if (total <= limit) return null;
+  const from = total === 0 ? 0 : offset + 1;
+  const to = Math.min(offset + limit, total);
+  return (
+    <div className="row" style={{ marginTop: 12, justifyContent: "flex-end" }}>
+      <span className="muted" style={{ fontSize: 12 }}>
+        {from}–{to} of {total}
+      </span>
+      <button
+        className="btn ghost sm"
+        disabled={offset === 0}
+        onClick={() => onOffset(Math.max(0, offset - limit))}
+      >
+        ‹ Prev
+      </button>
+      <button
+        className="btn ghost sm"
+        disabled={to >= total}
+        onClick={() => onOffset(offset + limit)}
+      >
+        Next ›
+      </button>
+    </div>
+  );
+}

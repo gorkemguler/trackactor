@@ -2,15 +2,18 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, useApi } from "../api";
 import { useEnums } from "../App";
-import type { Actor, CaseSummary } from "../types";
+import type { Actor, CaseSummary, Page } from "../types";
 import {
   ErrorNote,
   Modal,
+  Pager,
   PriorityBadge,
   StatusBadge,
   TagInput,
   fmtDate,
 } from "../ui";
+
+const LIMIT = 50;
 
 const EMPTY = {
   case_id: "",
@@ -29,16 +32,16 @@ export default function CasesPage() {
   const enums = useEnums();
   const [statusFilter, setStatusFilter] = useState("");
   const [search, setSearch] = useState("");
+  const [offset, setOffset] = useState(0);
   const path = useMemo(() => {
-    const p = new URLSearchParams();
+    const p = new URLSearchParams({ limit: String(LIMIT), offset: String(offset) });
     if (statusFilter) p.set("status", statusFilter);
     if (search.trim()) p.set("q", search.trim());
-    const s = p.toString();
-    return `/cases${s ? `?${s}` : ""}`;
-  }, [statusFilter, search]);
+    return `/cases?${p.toString()}`;
+  }, [statusFilter, search, offset]);
 
-  const { data, error, loading, refetch } = useApi<CaseSummary[]>(path, [path]);
-  const { data: actors } = useApi<Actor[]>("/actors");
+  const { data, error, loading, refetch } = useApi<Page<CaseSummary>>(path, [path]);
+  const { data: actors } = useApi<Page<Actor>>("/actors?limit=200");
 
   const [showNew, setShowNew] = useState(false);
   const [form, setForm] = useState(EMPTY);
@@ -84,12 +87,18 @@ export default function CasesPage() {
           style={{ maxWidth: 280 }}
           placeholder="Search case ID / title / analyst"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setOffset(0);
+          }}
         />
         <select
           style={{ maxWidth: 200 }}
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setOffset(0);
+          }}
         >
           <option value="">All statuses</option>
           {enums.case_statuses.map((s) => (
@@ -117,7 +126,7 @@ export default function CasesPage() {
             </tr>
           </thead>
           <tbody>
-            {data?.map((c) => (
+            {data?.items.map((c) => (
               <tr key={c.id}>
                 <td>
                   <Link to={`/cases/${c.id}`} className="mono">
@@ -139,9 +148,14 @@ export default function CasesPage() {
             ))}
           </tbody>
         </table>
-        {!loading && data?.length === 0 && <div className="empty">No cases match.</div>}
+        {!loading && data?.items.length === 0 && (
+          <div className="empty">No cases match.</div>
+        )}
         {loading && !data && <div className="empty">Loading…</div>}
       </div>
+      {data && (
+        <Pager total={data.total} limit={data.limit} offset={data.offset} onOffset={setOffset} />
+      )}
 
       {showNew && (
         <Modal title="New case" onClose={() => setShowNew(false)}>
@@ -242,7 +256,7 @@ export default function CasesPage() {
               }
               style={{ minHeight: 90 }}
             >
-              {actors?.map((a) => (
+              {actors?.items.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name} ({a.actor_type})
                 </option>

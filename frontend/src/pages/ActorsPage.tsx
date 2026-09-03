@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api, useApi } from "../api";
 import { useEnums } from "../App";
-import type { Actor } from "../types";
-import { Badge, ErrorNote, Modal, TagInput, TlpBadge } from "../ui";
+import type { Actor, Page } from "../types";
+import { Badge, ErrorNote, Modal, Pager, TagInput, TlpBadge } from "../ui";
+
+const LIMIT = 50;
 
 const EMPTY = {
   name: "",
@@ -16,10 +18,11 @@ const EMPTY = {
 export default function ActorsPage() {
   const enums = useEnums();
   const [q, setQ] = useState("");
-  const { data, error, loading, refetch } = useApi<Actor[]>(
-    `/actors${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ""}`,
-    [q],
-  );
+  const [offset, setOffset] = useState(0);
+  const path = `/actors?limit=${LIMIT}&offset=${offset}${
+    q.trim() ? `&q=${encodeURIComponent(q.trim())}` : ""
+  }`;
+  const { data, error, loading, refetch } = useApi<Page<Actor>>(path, [path]);
 
   const [showNew, setShowNew] = useState(false);
   const [form, setForm] = useState(EMPTY);
@@ -63,7 +66,10 @@ export default function ActorsPage() {
           style={{ maxWidth: 280 }}
           placeholder="Search name / alias"
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setOffset(0);
+          }}
         />
       </div>
 
@@ -82,7 +88,7 @@ export default function ActorsPage() {
             </tr>
           </thead>
           <tbody>
-            {data?.map((a) => (
+            {data?.items.map((a) => (
               <tr key={a.id}>
                 <td>
                   <Link to={`/actors/${a.id}`}>{a.name}</Link>
@@ -106,9 +112,12 @@ export default function ActorsPage() {
             ))}
           </tbody>
         </table>
-        {!loading && data?.length === 0 && <div className="empty">No actors.</div>}
+        {!loading && data?.items.length === 0 && <div className="empty">No actors.</div>}
         {loading && !data && <div className="empty">Loading…</div>}
       </div>
+      {data && (
+        <Pager total={data.total} limit={data.limit} offset={data.offset} onOffset={setOffset} />
+      )}
 
       {showNew && (
         <Modal title="New actor" onClose={() => setShowNew(false)}>

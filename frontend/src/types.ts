@@ -6,6 +6,13 @@ export interface Enums {
   directions: string[];
 }
 
+export interface Page<T> {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface Contact {
   id: number;
   actor_id: number | null;
@@ -16,6 +23,7 @@ export interface Contact {
   is_active: boolean;
   notes: string | null;
   created_at: string;
+  last_seen: string | null;
   actor_name?: string | null;
 }
 
@@ -62,6 +70,8 @@ export interface Interaction {
   analyst: string | null;
   created_at: string;
   contact_value: string | null;
+  case_ref: string | null;
+  case_title: string | null;
 }
 
 export interface CaseSummary {

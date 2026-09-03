@@ -8,6 +8,7 @@ import CasesPage from "./pages/CasesPage";
 import CaseDetailPage from "./pages/CaseDetailPage";
 import ActorsPage from "./pages/ActorsPage";
 import ActorDetailPage from "./pages/ActorDetailPage";
+import MessagesPage from "./pages/MessagesPage";
 
 const FALLBACK: Enums = {
   actor_types: ["unknown"],
@@ -42,6 +43,9 @@ export default function App() {
           <NavLink to="/actors" className="nav-link">
             ☠ Actors
           </NavLink>
+          <NavLink to="/messages" className="nav-link">
+            ✉ Messages
+          </NavLink>
           <div className="spacer" />
           <a className="nav-link" href="/api/docs" target="_blank" rel="noreferrer">
             ⚙ API docs
@@ -56,6 +60,7 @@ export default function App() {
             <Route path="/cases/:id" element={<CaseDetailPage />} />
             <Route path="/actors" element={<ActorsPage />} />
             <Route path="/actors/:id" element={<ActorDetailPage />} />
+            <Route path="/messages" element={<MessagesPage />} />
             <Route path="*" element={<div className="empty">Not found</div>} />
           </Routes>
         </main>

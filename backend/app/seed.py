@@ -207,6 +207,17 @@ def seed(force=False):
                 ),
             ]
         )
+        db.flush()
+
+        # last_seen normally gets set when an interaction is logged through the API
+        for inter in db.query(Interaction).all():
+            if inter.contact_id:
+                c = db.get(Contact, inter.contact_id)
+                if c and (c.last_seen is None or c.last_seen < inter.occurred_at):
+                    c.last_seen = inter.occurred_at
+                    if c.actor:
+                        c.actor.last_seen = inter.occurred_at
+
         db.commit()
         print("Seeded 4 actors, 9 contacts, 5 cases, 6 interactions.")
     finally:

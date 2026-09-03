@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, useApi } from "../api";
 import { useEnums } from "../App";
 import type { Actor } from "../types";
-import { Badge, ErrorNote, Modal, TlpBadge, fmtDateTime } from "../ui";
+import { Badge, ErrorNote, Modal, TlpBadge, fmtDate, fmtDateTime } from "../ui";
 
 export default function ActorDetailPage() {
   const { id } = useParams();
@@ -107,6 +107,7 @@ export default function ActorDetailPage() {
                       <div className="muted" style={{ fontSize: 12 }}>
                         norm: <code>{ct.normalized}</code>
                         {ct.label ? ` · ${ct.label}` : ""}
+                        {ct.last_seen ? ` · last seen ${fmtDate(ct.last_seen)}` : ""}
                         {!ct.is_active ? " · inactive" : ""}
                       </div>
                     </td>
