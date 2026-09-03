@@ -3,6 +3,10 @@
 Capture a case ID or a threat-actor handle into trackactor from the page you're
 on, without switching tabs.
 
+| Capture | Result | Lookup |
+| --- | --- | --- |
+| ![Capture form](../docs/screenshots/ext-capture.png) | ![Saved](../docs/screenshots/ext-result.png) | ![Lookup](../docs/screenshots/ext-lookup.png) |
+
 ## What it does
 
 - **On a CTI platform** (OpenCTI, MISP, TheHive, ...) — open the popup and it
