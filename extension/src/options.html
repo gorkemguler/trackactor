@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>trackactor settings</title>
+  <link rel="stylesheet" href="popup.css">
+  <style>
+    body { width: auto; max-width: 460px; margin: 40px auto; padding: 0 20px; }
+    h1 { font-size: 16px; margin: 0 0 4px; }
+    p.sub { color: var(--faint); font-size: 12px; margin: 0 0 20px; }
+    .ok-line { color: var(--green); font-size: 12px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>track<span style="color:var(--accent)">actor</span> settings</h1>
+  <p class="sub">Point the extension at your trackactor instance.</p>
+
+  <label class="f">
+    <span>trackactor URL</span>
+    <input id="baseUrl" placeholder="http://localhost:8080" autocomplete="off">
+  </label>
+  <label class="f">
+    <span>API key <span class="hint">&mdash; optional, sent as X-API-Key</span></span>
+    <input id="apiKey" autocomplete="off">
+  </label>
+
+  <div class="row">
+    <button class="btn" id="save">Save</button>
+    <button class="btn ghost" id="test">Test connection</button>
+  </div>
+  <div id="out" style="margin-top:12px"></div>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>

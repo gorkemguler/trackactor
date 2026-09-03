@@ -119,6 +119,7 @@ curl 'localhost:8000/api/lookup?q=https://t.me/n3tw0rm_deals'
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/lookup?q=` | resolve a handle / link / alias / case id to case(s) |
+| `POST` | `/api/capture` | upsert a case + actor + contact + message and link them, in one call |
 | `GET` `POST` | `/api/cases` | list / create cases |
 | `GET` `PATCH` `DELETE` | `/api/cases/{id}` | one case with its actors, contacts and log |
 | `POST` | `/api/cases/{id}/links` | link an actor or contact to a case |
@@ -127,6 +128,13 @@ curl 'localhost:8000/api/lookup?q=https://t.me/n3tw0rm_deals'
 | `POST` | `/api/actors/{id}/contacts` | add a channel to an actor |
 | `GET` `POST` | `/api/contacts` | search communication identifiers |
 | `GET` | `/api/stats` | dashboard counters |
+
+## Browser extension
+
+`extension/` is an unpacked MV3 extension for Chrome / Edge / Firefox. It grabs a
+case ID off a CTI platform page, or the `@handle` of the Telegram Web chat you
+have open, and files it against a case through `/api/capture` without leaving the
+page. See [extension/README.md](extension/README.md).
 
 ## Configuration
 

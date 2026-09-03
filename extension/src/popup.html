@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="hd">
+    <span class="brand">track<span>actor</span></span>
+    <span class="dot" id="dot" title="connection"></span>
+    <span class="spacer"></span>
+    <button class="iconbtn" id="openOptions" title="Settings">&#9881;</button>
+  </div>
+
+  <div class="tabs">
+    <button id="tabCapture" class="active">Capture</button>
+    <button id="tabLookup">Lookup</button>
+  </div>
+
+  <!-- CAPTURE -->
+  <div class="panel" id="panelCapture">
+    <div id="captureMsg"></div>
+
+    <div id="captureForm">
+      <label class="f">
+        <span>Case ID <span class="hint">&mdash; from your platform</span></span>
+        <input id="caseId" class="mono" placeholder="OPENCTI-2026-0042" autocomplete="off">
+      </label>
+      <label class="f">
+        <span>Title <span class="hint">&mdash; only used if the case is new</span></span>
+        <input id="caseTitle" autocomplete="off">
+      </label>
+      <div class="row">
+        <label class="f">
+          <span>Platform</span>
+          <input id="casePlatform" autocomplete="off">
+        </label>
+        <label class="f">
+          <span>Priority</span>
+          <select id="casePriority">
+            <option value="">keep / default</option>
+            <option>low</option><option>medium</option><option>high</option><option>critical</option>
+          </select>
+        </label>
+      </div>
+      <label class="f">
+        <span>Source URL</span>
+        <input id="caseUrl" autocomplete="off">
+      </label>
+
+      <div class="sec">
+        <label class="toggle"><input type="checkbox" id="incActor"> Attribute to an actor</label>
+        <div class="body" id="actorBody" hidden>
+          <label class="f">
+            <span>Actor name / handle</span>
+            <input id="actorName" autocomplete="off">
+          </label>
+          <label class="f">
+            <span>Type</span>
+            <select id="actorType">
+              <option>unknown</option><option>individual</option><option>group</option>
+              <option>ransomware</option><option value="initial_access_broker">initial access broker</option>
+              <option>vendor</option><option>hacktivist</option><option value="state_sponsored">state sponsored</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="sec">
+        <label class="toggle"><input type="checkbox" id="incContact"> Add a contact / channel</label>
+        <div class="body" id="contactBody" hidden>
+          <div class="row">
+            <label class="f">
+              <span>Channel</span>
+              <select id="contactType">
+                <option>telegram</option><option>xmpp</option><option>tox</option><option>session</option>
+                <option>email</option><option>forum</option><option>discord</option><option>matrix</option>
+                <option>signal</option><option>url</option><option>other</option>
+              </select>
+            </label>
+          </div>
+          <label class="f">
+            <span>Handle / link</span>
+            <input id="contactValue" class="mono" autocomplete="off" placeholder="@handle  ·  https://t.me/handle">
+          </label>
+        </div>
+      </div>
+
+      <div class="sec">
+        <label class="toggle"><input type="checkbox" id="incMsg"> Log a message</label>
+        <div class="body" id="msgBody" hidden>
+          <label class="f">
+            <span>Direction</span>
+            <select id="msgDir"><option>outbound</option><option>inbound</option></select>
+          </label>
+          <label class="f">
+            <span>Summary</span>
+            <textarea id="msgSummary" placeholder="What was said."></textarea>
+          </label>
+        </div>
+      </div>
+
+      <button class="btn" id="saveBtn">Save to trackactor</button>
+    </div>
+
+    <div class="result" id="captureResult" hidden></div>
+  </div>
+
+  <!-- LOOKUP -->
+  <div class="panel" id="panelLookup" hidden>
+    <label class="f">
+      <span>A reply came in &mdash; which case?</span>
+      <input id="lookupQ" class="mono" autocomplete="off" placeholder="@handle  ·  t.me/x  ·  CASE-ID">
+    </label>
+    <button class="btn" id="lookupBtn">Look up</button>
+    <div id="lookupOut" style="margin-top:12px"></div>
+  </div>
+
+  <div class="foot" id="foot"></div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

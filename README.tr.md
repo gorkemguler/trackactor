@@ -122,6 +122,7 @@ curl 'localhost:8000/api/lookup?q=https://t.me/n3tw0rm_deals'
 | Metod | Yol | Amaç |
 | --- | --- | --- |
 | `GET` | `/api/lookup?q=` | kullanıcı adı / bağlantı / takma ad / vaka id'sini vaka(lar)a çöz |
+| `POST` | `/api/capture` | tek çağrıda vaka + aktör + iletişim kimliği + mesaj oluştur/güncelle ve bağla |
 | `GET` `POST` | `/api/cases` | vakaları listele / oluştur |
 | `GET` `PATCH` `DELETE` | `/api/cases/{id}` | aktörleri, kimlikleri ve kaydıyla tek vaka |
 | `POST` | `/api/cases/{id}/links` | bir aktörü veya iletişim kimliğini vakaya bağla |
@@ -130,6 +131,13 @@ curl 'localhost:8000/api/lookup?q=https://t.me/n3tw0rm_deals'
 | `POST` | `/api/actors/{id}/contacts` | bir aktöre kanal ekle |
 | `GET` `POST` | `/api/contacts` | iletişim kimliklerinde ara |
 | `GET` | `/api/stats` | panel sayaçları |
+
+## Tarayıcı eklentisi
+
+`extension/` klasörü Chrome / Edge / Firefox için paketlenmemiş bir MV3
+eklentisi. Bir CTI platformu sayfasındaki vaka ID'sini ya da açık olan Telegram
+Web sohbetinin `@handle`'ını alıp, sayfadan çıkmadan `/api/capture` üzerinden bir
+vakaya işler. Bkz. [extension/README.md](extension/README.md).
 
 ## Yapılandırma
 
