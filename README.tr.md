@@ -2,6 +2,14 @@
   <img src="docs/banner.png" alt="trackactor" width="960">
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.12%2B-3776AB?logo=python&logoColor=white" alt="Python 3.12+">
+  <img src="https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/UI-React%20%2B%20TS-3178C6?logo=react&logoColor=white" alt="React + TypeScript">
+  <img src="https://img.shields.io/badge/lisans-MIT-blue" alt="MIT lisansı">
+  <img src="https://img.shields.io/badge/durum-akt%C4%B1f%20geli%C5%9Ftirme-brightgreen" alt="Aktif geliştirme">
+</p>
+
 <p align="center"><a href="README.md">English</a> · <b>Türkçe</b></p>
 
 # trackactor
@@ -138,6 +146,10 @@ curl 'localhost:8000/api/lookup?q=https://t.me/n3tw0rm_deals'
 eklentisi. Bir CTI platformu sayfasındaki vaka ID'sini ya da açık olan Telegram
 Web sohbetinin `@handle`'ını alıp, sayfadan çıkmadan `/api/capture` üzerinden bir
 vakaya işler. Bkz. [extension/README.md](extension/README.md).
+
+| Yakala | Bağlandı | Ters arama |
+| --- | --- | --- |
+| ![Eklenti yakalama formu](docs/screenshots/ext-capture.png) | ![Vakaya bağlandı](docs/screenshots/ext-result.png) | ![Popup'ta ters arama](docs/screenshots/ext-lookup.png) |
 
 ## Yapılandırma
 

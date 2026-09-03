@@ -2,6 +2,14 @@
   <img src="docs/banner.png" alt="trackactor" width="960">
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.12%2B-3776AB?logo=python&logoColor=white" alt="Python 3.12+">
+  <img src="https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/UI-React%20%2B%20TS-3178C6?logo=react&logoColor=white" alt="React + TypeScript">
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license">
+  <img src="https://img.shields.io/badge/status-active%20development-brightgreen" alt="Active development">
+</p>
+
 <p align="center"><b>English</b> · <a href="README.tr.md">Türkçe</a></p>
 
 # trackactor
@@ -135,6 +143,10 @@ curl 'localhost:8000/api/lookup?q=https://t.me/n3tw0rm_deals'
 case ID off a CTI platform page, or the `@handle` of the Telegram Web chat you
 have open, and files it against a case through `/api/capture` without leaving the
 page. See [extension/README.md](extension/README.md).
+
+| Capture | Saved | Lookup |
+| --- | --- | --- |
+| ![Extension capture form](docs/screenshots/ext-capture.png) | ![Linked to the case](docs/screenshots/ext-result.png) | ![Reverse lookup in the popup](docs/screenshots/ext-lookup.png) |
 
 ## Configuration
 
