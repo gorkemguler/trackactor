@@ -6,11 +6,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from .. import models, schemas
+from .. import events, models, schemas
 from ..activity import touch_seen
 from ..database import get_db
 from ..normalize import normalize_identifier
@@ -28,8 +28,13 @@ _DETAIL_OPTS = (
 
 
 @router.post("", response_model=schemas.CaptureResult, status_code=201)
-def capture(payload: schemas.CapturePayload, db: Session = Depends(get_db)):
+def capture(
+    payload: schemas.CapturePayload,
+    background: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     created = {"case": False, "actor": False, "contact": False, "interaction": False}
+    status_changed = False
 
     # --- case ---------------------------------------------------------
     case = db.scalar(select(models.Case).where(models.Case.case_id == payload.case.case_id))
@@ -93,24 +98,37 @@ def capture(payload: schemas.CapturePayload, db: Session = Depends(get_db)):
             db.add(models.CaseContact(case_id=case.id, contact_id=contact.id))
 
     # --- message --------------------------------------------------
+    new_interaction = None
     if payload.interaction:
-        db.add(
-            models.Interaction(
-                case_id=case.id,
-                contact_id=contact.id if contact else None,
-                direction=payload.interaction.direction,
-                occurred_at=payload.interaction.occurred_at or datetime.now(timezone.utc),
-                summary=payload.interaction.summary,
-                analyst=payload.interaction.analyst or payload.case.analyst,
-            )
+        new_interaction = models.Interaction(
+            case_id=case.id,
+            contact_id=contact.id if contact else None,
+            direction=payload.interaction.direction,
+            occurred_at=payload.interaction.occurred_at or datetime.now(timezone.utc),
+            summary=payload.interaction.summary,
+            analyst=payload.interaction.analyst or payload.case.analyst,
         )
+        db.add(new_interaction)
         created["interaction"] = True
         if payload.interaction.direction == "inbound" and case.status == "awaiting_response":
             case.status = "responded"
+            status_changed = True
 
     touch_seen(contact=contact, actor=actor)
 
     db.commit()
 
     case = db.get(models.Case, case.id, options=list(_DETAIL_OPTS))
+
+    if created["case"]:
+        events.emit(background, "case.created", events.payload(case))
+    if new_interaction is not None:
+        events.emit(
+            background,
+            f"interaction.{new_interaction.direction}",
+            events.payload(case, new_interaction),
+        )
+    if status_changed:
+        events.emit(background, "case.status_changed", events.payload(case))
+
     return schemas.CaptureResult(case=case_detail(case), created=created)

@@ -342,5 +342,55 @@ class CaptureResult(BaseModel):
     created: dict[str, bool]
 
 
+# --- API keys ----------------------------------------------------
+
+
+class ApiKeyCreate(BaseModel):
+    label: str = Field(min_length=1, max_length=120)
+    scope: str = "read"  # read | write
+
+
+class ApiKeyOut(ORMModel):
+    id: int
+    label: str
+    prefix: str
+    scope: str
+    revoked: bool
+    last_used_at: datetime | None = None
+    created_at: datetime
+
+
+class ApiKeyCreated(ApiKeyOut):
+    key: str  # full key, shown only on creation
+
+
+# --- Webhooks ---------------------------------------------------
+
+
+class WebhookCreate(BaseModel):
+    url: str = Field(min_length=1, max_length=500)
+    secret: str = Field(min_length=1, max_length=120)
+    events: list[str] = Field(default_factory=lambda: ["*"])
+    active: bool = True
+
+
+class WebhookUpdate(BaseModel):
+    url: str | None = Field(default=None, min_length=1, max_length=500)
+    secret: str | None = Field(default=None, min_length=1, max_length=120)
+    events: list[str] | None = None
+    active: bool | None = None
+
+
+class WebhookOut(ORMModel):
+    id: int
+    url: str
+    events: list[str]
+    active: bool
+    last_status: int | None = None
+    last_attempt_at: datetime | None = None
+    failure_count: int
+    created_at: datetime
+
+
 CaseDetail.model_rebuild()
 CaptureResult.model_rebuild()

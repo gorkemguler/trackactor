@@ -4,13 +4,24 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import __version__
 from .config import settings
 from .database import init_db
-from .routers import actors, capture, cases, contacts, interactions, lookup, stats
+from .routers import (
+    actors,
+    capture,
+    cases,
+    contacts,
+    interactions,
+    keys,
+    lookup,
+    stats,
+    webhooks,
+)
+from .security import auth_gate
 
 
 @asynccontextmanager
@@ -27,6 +38,7 @@ app = FastAPI(
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
+    dependencies=[Depends(auth_gate)],
 )
 
 app.add_middleware(
@@ -45,6 +57,8 @@ app.include_router(interactions.router)
 app.include_router(lookup.router)
 app.include_router(capture.router)
 app.include_router(stats.router)
+app.include_router(keys.router)
+app.include_router(webhooks.router)
 
 
 @app.get("/api/health", tags=["meta"])

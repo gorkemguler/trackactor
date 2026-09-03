@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from .. import models, schemas
+from .. import events, models, schemas
 from ..activity import touch_seen
 from ..database import get_db
 from ..serializers import case_detail, case_out, interaction_out
@@ -68,7 +68,11 @@ def list_cases(
 
 
 @router.post("", response_model=schemas.CaseDetail, status_code=201)
-def create_case(payload: schemas.CaseCreate, db: Session = Depends(get_db)):
+def create_case(
+    payload: schemas.CaseCreate,
+    background: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     if db.scalar(select(models.Case).where(models.Case.case_id == payload.case_id)):
         raise HTTPException(status_code=409, detail="case_id already exists")
 
@@ -94,7 +98,9 @@ def create_case(payload: schemas.CaseCreate, db: Session = Depends(get_db)):
 
     db.add(case)
     db.commit()
-    return case_detail(_load(db, case.id))
+    loaded = _load(db, case.id)
+    events.emit(background, "case.created", events.payload(loaded))
+    return case_detail(loaded)
 
 
 @router.get("/{case_id}", response_model=schemas.CaseDetail)
@@ -103,8 +109,14 @@ def get_case(case_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{case_id}", response_model=schemas.CaseDetail)
-def update_case(case_id: int, payload: schemas.CaseUpdate, db: Session = Depends(get_db)):
+def update_case(
+    case_id: int,
+    payload: schemas.CaseUpdate,
+    background: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     case = _load(db, case_id)
+    status_before = case.status
     data = payload.model_dump(exclude_unset=True)
     if "case_id" in data and data["case_id"] != case.case_id:
         if db.scalar(select(models.Case).where(models.Case.case_id == data["case_id"])):
@@ -112,6 +124,8 @@ def update_case(case_id: int, payload: schemas.CaseUpdate, db: Session = Depends
     for key, value in data.items():
         setattr(case, key, value)
     db.commit()
+    if case.status != status_before:
+        events.emit(background, "case.status_changed", events.payload(_load(db, case_id)))
     return case_detail(_load(db, case_id))
 
 
@@ -190,7 +204,10 @@ def list_interactions(case_id: int, db: Session = Depends(get_db)):
     "/{case_id}/interactions", response_model=schemas.InteractionOut, status_code=201
 )
 def add_interaction(
-    case_id: int, payload: schemas.InteractionCreate, db: Session = Depends(get_db)
+    case_id: int,
+    payload: schemas.InteractionCreate,
+    background: BackgroundTasks,
+    db: Session = Depends(get_db),
 ):
     case = db.get(models.Case, case_id)
     if case is None:
@@ -214,11 +231,18 @@ def add_interaction(
     if contact is not None:
         touch_seen(contact=contact)
 
-    if payload.direction == "inbound" and case.status == "awaiting_response":
+    status_changed = payload.direction == "inbound" and case.status == "awaiting_response"
+    if status_changed:
         case.status = "responded"
 
     db.commit()
     db.refresh(interaction)
+
+    events.emit(
+        background, f"interaction.{interaction.direction}", events.payload(case, interaction)
+    )
+    if status_changed:
+        events.emit(background, "case.status_changed", events.payload(case))
     return interaction_out(interaction)
 
 
