@@ -5,7 +5,7 @@ from __future__ import annotations
 from . import models, schemas
 
 
-def interaction_out(obj: models.Interaction) -> schemas.InteractionOut:
+def interaction_out(obj: models.Interaction, *, with_case: bool = False) -> schemas.InteractionOut:
     return schemas.InteractionOut(
         id=obj.id,
         case_id=obj.case_id,
@@ -16,6 +16,8 @@ def interaction_out(obj: models.Interaction) -> schemas.InteractionOut:
         contact_id=obj.contact_id,
         created_at=obj.created_at,
         contact_value=obj.contact.value if obj.contact else None,
+        case_ref=obj.case.case_id if with_case and obj.case else None,
+        case_title=obj.case.title if with_case and obj.case else None,
     )
 
 

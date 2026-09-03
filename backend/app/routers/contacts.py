@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from .. import models, schemas
@@ -14,27 +14,36 @@ from ..serializers import contact_with_actor
 router = APIRouter(prefix="/api/contacts", tags=["contacts"])
 
 
-@router.get("", response_model=list[schemas.ContactWithActor])
+@router.get("", response_model=schemas.Page[schemas.ContactWithActor])
 def list_contacts(
     q: str | None = Query(default=None, description="substring match on value / normalized"),
     channel_type: str | None = None,
     unattributed: bool = Query(default=False, description="only contacts with no actor"),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ):
-    stmt = select(models.Contact).options(selectinload(models.Contact.actor))
+    stmt = select(models.Contact)
     if channel_type:
         stmt = stmt.where(models.Contact.channel_type == channel_type)
     if unattributed:
         stmt = stmt.where(models.Contact.actor_id.is_(None))
     if q:
         norm = normalize_identifier(q)
-        like = f"%{q.lower()}%"
-        nlike = f"%{norm}%"
         stmt = stmt.where(
-            models.Contact.value.ilike(like) | models.Contact.normalized.ilike(nlike)
+            models.Contact.value.ilike(f"%{q.lower()}%")
+            | models.Contact.normalized.ilike(f"%{norm}%")
         )
-    stmt = stmt.order_by(models.Contact.created_at.desc())
-    return [contact_with_actor(c) for c in db.scalars(stmt).unique().all()]
+
+    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    page = (
+        stmt.options(selectinload(models.Contact.actor))
+        .order_by(models.Contact.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    items = [contact_with_actor(c) for c in db.scalars(page).unique().all()]
+    return schemas.Page(items=items, total=total, limit=limit, offset=offset)
 
 
 @router.post("", response_model=schemas.ContactWithActor, status_code=201)

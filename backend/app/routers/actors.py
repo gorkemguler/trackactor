@@ -25,10 +25,12 @@ def _get_actor(db: Session, actor_id: int) -> models.Actor:
     return actor
 
 
-@router.get("", response_model=list[schemas.ActorDetail])
+@router.get("", response_model=schemas.Page[schemas.ActorDetail])
 def list_actors(
     q: str | None = Query(default=None, description="filter by name / alias substring"),
     actor_type: str | None = None,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ):
     stmt = select(models.Actor).options(
@@ -37,8 +39,7 @@ def list_actors(
     )
     if actor_type:
         stmt = stmt.where(models.Actor.actor_type == actor_type)
-    stmt = stmt.order_by(models.Actor.name)
-    actors = db.scalars(stmt).unique().all()
+    actors = db.scalars(stmt.order_by(models.Actor.name)).unique().all()
 
     # aliases live in a JSON column, so filter name/alias in Python
     if q:
@@ -49,7 +50,14 @@ def list_actors(
             if ql in a.name.lower()
             or any(ql in (al or "").lower() for al in (a.aliases or []))
         ]
-    return [actor_detail(a) for a in actors]
+
+    page = actors[offset : offset + limit]
+    return schemas.Page(
+        items=[actor_detail(a) for a in page],
+        total=len(actors),
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.post("", response_model=schemas.ActorDetail, status_code=201)

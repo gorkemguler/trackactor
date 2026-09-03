@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import __version__
 from .config import settings
 from .database import init_db
-from .routers import actors, capture, cases, contacts, lookup, stats
+from .routers import actors, capture, cases, contacts, interactions, lookup, stats
 
 
 @asynccontextmanager
@@ -41,6 +41,7 @@ app.add_middleware(
 app.include_router(cases.router)
 app.include_router(actors.router)
 app.include_router(contacts.router)
+app.include_router(interactions.router)
 app.include_router(lookup.router)
 app.include_router(capture.router)
 app.include_router(stats.router)

@@ -4,7 +4,7 @@ case(s) it belongs to, going through the matching contact or actor."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from .. import models, schemas
@@ -58,16 +58,28 @@ def lookup(
         selectinload(models.Contact.case_links).selectinload(models.CaseContact.case).selectinload(models.Case.interactions),
     ]
 
-    # --- contacts -------------------------------------------------------
-    all_contacts = db.scalars(select(models.Contact).options(*contact_opts)).unique().all()
+    # --- contacts -----------------------------------------------------
+    # Match on the indexed `normalized` column instead of scanning every row:
+    # exact hit uses the index; the substring / raw-value clauses narrow the
+    # rest in the database rather than in Python.
+    conds = []
+    if norm:
+        conds.append(models.Contact.normalized == norm)
+        conds.append(models.Contact.normalized.like(f"%{norm}%"))
+    if raw_lower:
+        conds.append(func.lower(models.Contact.value).like(f"%{raw_lower}%"))
+
     contact_hits: list[schemas.LookupContactHit] = []
-    for c in all_contacts:
+    matched = (
+        db.scalars(select(models.Contact).options(*contact_opts).where(or_(*conds))).unique().all()
+        if conds
+        else []
+    )
+    for c in matched:
         cn = c.normalized or ""
-        if not cn and not norm:
-            continue
-        if cn == norm and norm:
+        if norm and cn == norm:
             match = "exact"
-        elif norm and (norm in cn or cn in norm):
+        elif norm and norm in cn:
             match = "partial"
         elif raw_lower and raw_lower in c.value.lower():
             match = "partial"

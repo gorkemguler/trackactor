@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -43,6 +44,16 @@ class ORMModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+T = TypeVar("T")
+
+
+class Page(BaseModel, Generic[T]):
+    items: list[T]
+    total: int
+    limit: int
+    offset: int
+
+
 # --- Contact --------------------------------------------------------------
 
 
@@ -72,6 +83,7 @@ class ContactOut(ORMModel, ContactBase):
     actor_id: int | None
     normalized: str
     created_at: datetime
+    last_seen: datetime | None = None
 
 
 class ContactWithActor(ContactOut):
@@ -217,6 +229,8 @@ class InteractionOut(ORMModel, InteractionBase):
     occurred_at: datetime
     created_at: datetime
     contact_value: str | None = None
+    case_ref: str | None = None
+    case_title: str | None = None
 
 
 # --- Lookup ----------------------------------------------------------

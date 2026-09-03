@@ -5,10 +5,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from .. import models, schemas
+from ..activity import touch_seen
 from ..database import get_db
 from ..serializers import case_detail, case_out, interaction_out
 
@@ -30,17 +31,16 @@ def _load(db: Session, case_id: int) -> models.Case:
     return case
 
 
-@router.get("", response_model=list[schemas.CaseOut])
+@router.get("", response_model=schemas.Page[schemas.CaseOut])
 def list_cases(
     status: str | None = None,
     priority: str | None = None,
     q: str | None = Query(default=None, description="substring on case_id / title / analyst"),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ):
-    stmt = select(models.Case).options(
-        selectinload(models.Case.actor_links),
-        selectinload(models.Case.interactions),
-    )
+    stmt = select(models.Case)
     if status:
         stmt = stmt.where(models.Case.status == status)
     if priority:
@@ -52,8 +52,19 @@ def list_cases(
             | models.Case.title.ilike(like)
             | models.Case.analyst.ilike(like)
         )
-    stmt = stmt.order_by(models.Case.updated_at.desc())
-    return [case_out(c) for c in db.scalars(stmt).unique().all()]
+
+    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    page = (
+        stmt.options(
+            selectinload(models.Case.actor_links),
+            selectinload(models.Case.interactions),
+        )
+        .order_by(models.Case.updated_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    items = [case_out(c) for c in db.scalars(page).unique().all()]
+    return schemas.Page(items=items, total=total, limit=limit, offset=offset)
 
 
 @router.post("", response_model=schemas.CaseDetail, status_code=201)
@@ -184,8 +195,12 @@ def add_interaction(
     case = db.get(models.Case, case_id)
     if case is None:
         raise HTTPException(status_code=404, detail="Case not found")
-    if payload.contact_id is not None and db.get(models.Contact, payload.contact_id) is None:
-        raise HTTPException(status_code=404, detail="contact_id not found")
+
+    contact = None
+    if payload.contact_id is not None:
+        contact = db.get(models.Contact, payload.contact_id)
+        if contact is None:
+            raise HTTPException(status_code=404, detail="contact_id not found")
 
     interaction = models.Interaction(
         case_id=case_id,
@@ -196,6 +211,8 @@ def add_interaction(
         analyst=payload.analyst,
     )
     db.add(interaction)
+    if contact is not None:
+        touch_seen(contact=contact)
 
     if payload.direction == "inbound" and case.status == "awaiting_response":
         case.status = "responded"

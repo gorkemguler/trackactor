@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from .. import models, schemas
+from ..activity import touch_seen
 from ..database import get_db
 from ..normalize import normalize_identifier
 from ..serializers import case_detail
@@ -107,8 +108,7 @@ def capture(payload: schemas.CapturePayload, db: Session = Depends(get_db)):
         if payload.interaction.direction == "inbound" and case.status == "awaiting_response":
             case.status = "responded"
 
-    if actor is not None:
-        actor.last_seen = datetime.now(timezone.utc)
+    touch_seen(contact=contact, actor=actor)
 
     db.commit()
 
