@@ -2,6 +2,8 @@
   <img src="docs/banner.png" alt="trackactor" width="960">
 </p>
 
+<p align="center"><b>English</b> · <a href="README.tr.md">Türkçe</a></p>
+
 # trackactor
 
 Keep track of which case you're talking to a threat actor about.
