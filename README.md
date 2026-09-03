@@ -53,6 +53,10 @@ same key and resolve to the case.
 
 ![Case detail](docs/screenshots/case-detail.png)
 
+**Messages** — search the whole log across every case, filter by direction.
+
+![Messages](docs/screenshots/messages.png)
+
 ## How it fits together
 
 - **Case** — a tracked engagement, keyed by your external `case_id` and its
@@ -132,10 +136,14 @@ curl 'localhost:8000/api/lookup?q=https://t.me/n3tw0rm_deals'
 | `GET` `PATCH` `DELETE` | `/api/cases/{id}` | one case with its actors, contacts and log |
 | `POST` | `/api/cases/{id}/links` | link an actor or contact to a case |
 | `POST` | `/api/cases/{id}/interactions` | log a message |
+| `GET` | `/api/interactions?q=` | search the message log (`case_id`, `actor_id`, `direction` filters) |
 | `GET` `POST` | `/api/actors` | actors and their aliases |
 | `POST` | `/api/actors/{id}/contacts` | add a channel to an actor |
 | `GET` `POST` | `/api/contacts` | search communication identifiers |
 | `GET` | `/api/stats` | dashboard counters |
+
+List endpoints (`/api/cases`, `/api/actors`, `/api/contacts`, `/api/interactions`)
+return `{ items, total, limit, offset }` and take `limit` (max 200) and `offset`.
 
 ## Browser extension
 

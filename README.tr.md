@@ -53,6 +53,10 @@ olur ve aynı vakaya çıkar.
 
 ![Vaka detayı](docs/screenshots/case-detail.png)
 
+**Mesajlar** — tüm vakalardaki kaydı aynı yerden ara, yöne göre süz.
+
+![Mesajlar](docs/screenshots/messages.png)
+
 ## Parçalar nasıl birleşiyor
 
 - **Case (Vaka)** — takip edilen bir tema; dış `case_id`'niz ve kaynak
@@ -135,10 +139,14 @@ curl 'localhost:8000/api/lookup?q=https://t.me/n3tw0rm_deals'
 | `GET` `PATCH` `DELETE` | `/api/cases/{id}` | aktörleri, kimlikleri ve kaydıyla tek vaka |
 | `POST` | `/api/cases/{id}/links` | bir aktörü veya iletişim kimliğini vakaya bağla |
 | `POST` | `/api/cases/{id}/interactions` | bir mesaj işle |
+| `GET` | `/api/interactions?q=` | mesaj kaydında ara (`case_id`, `actor_id`, `direction` süzgeçleri) |
 | `GET` `POST` | `/api/actors` | aktörler ve takma adları |
 | `POST` | `/api/actors/{id}/contacts` | bir aktöre kanal ekle |
 | `GET` `POST` | `/api/contacts` | iletişim kimliklerinde ara |
 | `GET` | `/api/stats` | panel sayaçları |
+
+Liste uçları (`/api/cases`, `/api/actors`, `/api/contacts`, `/api/interactions`)
+`{ items, total, limit, offset }` döndürür; `limit` (en fazla 200) ve `offset` alır.
 
 ## Tarayıcı eklentisi
 
