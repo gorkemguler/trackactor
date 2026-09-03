@@ -284,4 +284,49 @@ class Stats(BaseModel):
     recent_inbound: list[InteractionOut] = Field(default_factory=list)
 
 
+# --- Capture (one-shot: case + actor + contact + message) ---------
+
+
+class CaptureCase(BaseModel):
+    case_id: str = Field(min_length=1, max_length=120)
+    title: str | None = None  # only used when the case is created
+    source_platform: str | None = None
+    source_url: str | None = None
+    status: str | None = None
+    priority: str | None = None
+    analyst: str | None = None
+
+
+class CaptureActor(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    actor_type: str = "unknown"
+    aliases: list[str] = Field(default_factory=list)
+
+
+class CaptureContact(BaseModel):
+    channel_type: str = "other"
+    value: str = Field(min_length=1, max_length=500)
+    label: str | None = None
+
+
+class CaptureInteraction(BaseModel):
+    direction: str = "outbound"
+    summary: str = Field(min_length=1)
+    occurred_at: datetime | None = None
+    analyst: str | None = None
+
+
+class CapturePayload(BaseModel):
+    case: CaptureCase
+    actor: CaptureActor | None = None
+    contact: CaptureContact | None = None
+    interaction: CaptureInteraction | None = None
+
+
+class CaptureResult(BaseModel):
+    case: "CaseDetail"
+    created: dict[str, bool]
+
+
 CaseDetail.model_rebuild()
+CaptureResult.model_rebuild()
