@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, useApi } from "../api";
 import { useEnums } from "../App";
+import Evidence from "../Evidence";
 import History from "../History";
 import type { Actor, CaseDetail, Contact, Page, User } from "../types";
 import {
@@ -244,6 +245,10 @@ export default function CaseDetailPage() {
               </div>
             ))}
         </div>
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <Evidence caseId={id!} />
       </div>
 
       <div style={{ marginTop: 24 }}>

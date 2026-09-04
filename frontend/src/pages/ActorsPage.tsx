@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, useApi } from "../api";
 import { useEnums } from "../App";
@@ -28,6 +28,22 @@ export default function ActorsPage() {
   const [form, setForm] = useState(EMPTY);
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [dups, setDups] = useState<Actor[]>([]);
+
+  useEffect(() => {
+    const n = form.name.trim();
+    if (!showNew || n.length < 3) {
+      setDups([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      api
+        .get<Actor[]>(`/actors/similar?name=${encodeURIComponent(n)}`)
+        .then(setDups)
+        .catch(() => setDups([]));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [form.name, showNew]);
 
   async function create() {
     setSaving(true);
@@ -129,6 +145,19 @@ export default function ActorsPage() {
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
           </label>
+          {dups.length > 0 && (
+            <div className="msg warn" style={{ fontSize: 12, marginTop: -4 }}>
+              Possible duplicate of{" "}
+              {dups.map((d, i) => (
+                <span key={d.id}>
+                  {i > 0 && ", "}
+                  <Link to={`/actors/${d.id}`} target="_blank" rel="noreferrer">
+                    {d.name}
+                  </Link>
+                </span>
+              ))}
+            </div>
+          )}
           <div className="grid cols-2">
             <label className="field">
               <span>Type</span>

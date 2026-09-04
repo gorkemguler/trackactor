@@ -10,6 +10,7 @@ import ActorsPage from "./pages/ActorsPage";
 import ActorDetailPage from "./pages/ActorDetailPage";
 import MessagesPage from "./pages/MessagesPage";
 import AuditPage from "./pages/AuditPage";
+import ImportPage from "./pages/ImportPage";
 import SettingsPage from "./pages/SettingsPage";
 import LoginPage from "./pages/LoginPage";
 
@@ -61,6 +62,9 @@ export default function App() {
             <NavLink to="/actors" className="nav-link">
               ☠ Actors
             </NavLink>
+            <NavLink to="/import" className="nav-link">
+              ⇩ Import
+            </NavLink>
             <NavLink to="/messages" className="nav-link">
               ✉ Messages
             </NavLink>
@@ -100,6 +104,7 @@ export default function App() {
               <Route path="/actors/:id" element={<ActorDetailPage />} />
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/audit" element={<AuditPage />} />
+              <Route path="/import" element={<ImportPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="*" element={<div className="empty">Not found</div>} />
             </Routes>
