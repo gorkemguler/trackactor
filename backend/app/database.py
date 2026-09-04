@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from .config import settings
+
+_BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 connect_args = {"check_same_thread": False} if settings.db_url.startswith("sqlite") else {}
 
@@ -29,7 +32,22 @@ def get_db() -> Iterator[Session]:
 
 
 def init_db() -> None:
-    """Create all tables. Safe to call on every startup."""
-    from . import models  # noqa: F401  (ensure models are registered)
+    """Bring the schema to head via Alembic. Safe to call on every startup.
 
-    Base.metadata.create_all(bind=engine)
+    A database created by an older create_all build has the tables but no
+    alembic_version row - stamp it at the baseline first so the upgrade only
+    applies what came after.
+    """
+    from alembic import command
+    from alembic.config import Config
+
+    from . import models  # noqa: F401  (register tables on Base.metadata)
+
+    cfg = Config()
+    cfg.set_main_option("script_location", os.path.join(_BACKEND_DIR, "alembic"))
+    cfg.set_main_option("sqlalchemy.url", settings.db_url)
+
+    insp = inspect(engine)
+    if insp.has_table("cases") and not insp.has_table("alembic_version"):
+        command.stamp(cfg, "0001_baseline")
+    command.upgrade(cfg, "head")
