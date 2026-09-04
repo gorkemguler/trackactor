@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -12,6 +12,7 @@ from .. import events, models, schemas
 from ..activity import touch_seen
 from ..audit import diff, record
 from ..database import get_db
+from ..normalize import normalize_identifier
 from ..security import current_user
 from ..serializers import case_detail, case_out, interaction_out
 
@@ -117,6 +118,40 @@ def create_case(
 @router.get("/{case_id}", response_model=schemas.CaseDetail)
 def get_case(case_id: int, db: Session = Depends(get_db)):
     return case_detail(_load(db, case_id))
+
+
+@router.get("/{case_id}/export")
+def export_case(case_id: int, response: Response, db: Session = Depends(get_db)):
+    """A self-contained JSON bundle: the case, its actors and contacts in full,
+    the message log, and the audit trail. For handoff."""
+    case = _load(db, case_id)
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="{case.case_id}.trackactor.json"'
+    )
+    detail = case_detail(case).model_dump(mode="json")
+    actor_ids = [link.actor_id for link in case.actor_links]
+    actors = db.scalars(
+        select(models.Actor)
+        .options(selectinload(models.Actor.contacts))
+        .where(models.Actor.id.in_(actor_ids))
+    ).all() if actor_ids else []
+    events = db.scalars(
+        select(models.AuditEvent)
+        .where(models.AuditEvent.entity_type == "case", models.AuditEvent.entity_id == case_id)
+        .order_by(models.AuditEvent.at)
+    ).all()
+    return {
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "case": detail,
+        "actors": [
+            schemas.ActorDetail(
+                **schemas.ActorOut.model_validate(a).model_dump(),
+                contacts=[schemas.ContactOut.model_validate(c) for c in a.contacts],
+            ).model_dump(mode="json")
+            for a in actors
+        ],
+        "audit": [schemas.AuditEventOut.model_validate(e).model_dump(mode="json") for e in events],
+    }
 
 
 @router.patch("/{case_id}", response_model=schemas.CaseDetail)
@@ -233,6 +268,51 @@ def remove_contact_link(
     record(
         db, request, action="update", entity_type="case", entity_id=case.id,
         summary=f"unlinked contact {contact_id}",
+    )
+    db.commit()
+    return case_detail(_load(db, case_id))
+
+
+@router.post("/{case_id}/contacts", response_model=schemas.CaseDetail, status_code=201)
+def add_case_contact(
+    case_id: int,
+    payload: schemas.CaseContactCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Create a channel and link it to the case in one step."""
+    case = _load(db, case_id)
+    if payload.actor_id is not None and db.get(models.Actor, payload.actor_id) is None:
+        raise HTTPException(status_code=404, detail="actor_id not found")
+
+    norm = normalize_identifier(payload.value)
+    stmt = select(models.Contact).where(models.Contact.normalized == norm)
+    stmt = stmt.where(
+        models.Contact.actor_id == payload.actor_id
+        if payload.actor_id is not None
+        else models.Contact.actor_id.is_(None)
+    )
+    contact = db.scalar(stmt)
+    if contact is None:
+        contact = models.Contact(
+            actor_id=payload.actor_id,
+            channel_type=payload.channel_type,
+            value=payload.value,
+            normalized=norm,
+            label=payload.label,
+        )
+        db.add(contact)
+        db.flush()
+    elif payload.actor_id is not None and contact.actor_id is None:
+        contact.actor_id = payload.actor_id
+
+    if not any(l.contact_id == contact.id for l in case.contact_links):
+        case.contact_links.append(
+            models.CaseContact(contact_id=contact.id, outreach_handle=payload.outreach_handle)
+        )
+    record(
+        db, request, action="update", entity_type="case", entity_id=case.id,
+        summary=f"added contact {payload.value}",
     )
     db.commit()
     return case_detail(_load(db, case_id))

@@ -17,6 +17,7 @@ from .routers import (
     capture,
     cases,
     contacts,
+    export,
     interactions,
     keys,
     lookup,
@@ -62,6 +63,7 @@ app.include_router(lookup.router)
 app.include_router(capture.router)
 app.include_router(stats.router)
 app.include_router(audit.router)
+app.include_router(export.router)
 app.include_router(keys.router)
 app.include_router(webhooks.router)
 app.include_router(users.router)

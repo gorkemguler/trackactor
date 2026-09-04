@@ -203,6 +203,14 @@ class CaseLinkRequest(BaseModel):
     note: str | None = None
 
 
+class CaseContactCreate(BaseModel):
+    channel_type: str = "other"
+    value: str = Field(min_length=1, max_length=500)
+    label: str | None = None
+    actor_id: int | None = None
+    outreach_handle: str | None = None
+
+
 # --- Interaction -------------------------------------------------------
 
 
