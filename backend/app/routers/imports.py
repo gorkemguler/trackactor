@@ -36,7 +36,7 @@ def run_import(
     try:
         plan = importers.build_plan(payload.platform, payload.payload)
     except (ValueError, KeyError, TypeError) as e:
-        raise HTTPException(status_code=422, detail=f"could not parse {payload.platform}: {e}")
+        raise HTTPException(status_code=422, detail=f"could not parse {payload.platform}: {e}") from None
 
     case, case_created = services.upsert_case(db, plan.case)
     actors_created = 0

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     JSON,
@@ -21,7 +21,7 @@ from .database import Base
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class TimestampMixin:
@@ -46,8 +46,8 @@ class CaseActor(Base):
     note: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
-    case: Mapped["Case"] = relationship(back_populates="actor_links")
-    actor: Mapped["Actor"] = relationship(back_populates="case_links")
+    case: Mapped[Case] = relationship(back_populates="actor_links")
+    actor: Mapped[Actor] = relationship(back_populates="case_links")
 
 
 class CaseContact(Base):
@@ -64,8 +64,8 @@ class CaseContact(Base):
     note: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
-    case: Mapped["Case"] = relationship(back_populates="contact_links")
-    contact: Mapped["Contact"] = relationship(back_populates="case_links")
+    case: Mapped[Case] = relationship(back_populates="contact_links")
+    contact: Mapped[Contact] = relationship(back_populates="case_links")
 
 
 class Actor(Base, TimestampMixin):
@@ -80,7 +80,7 @@ class Actor(Base, TimestampMixin):
     first_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    contacts: Mapped[list["Contact"]] = relationship(
+    contacts: Mapped[list[Contact]] = relationship(
         back_populates="actor", cascade="all, delete-orphan"
     )
     case_links: Mapped[list[CaseActor]] = relationship(
@@ -109,7 +109,7 @@ class Contact(Base):
     case_links: Mapped[list[CaseContact]] = relationship(
         back_populates="contact", cascade="all, delete-orphan"
     )
-    interactions: Mapped[list["Interaction"]] = relationship(back_populates="contact")
+    interactions: Mapped[list[Interaction]] = relationship(back_populates="contact")
 
 
 class Case(Base, TimestampMixin):
@@ -128,15 +128,15 @@ class Case(Base, TimestampMixin):
     assignee_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 
-    assignee: Mapped["User | None"] = relationship(foreign_keys=[assignee_id])
-    created_by: Mapped["User | None"] = relationship(foreign_keys=[created_by_id])
+    assignee: Mapped[User | None] = relationship(foreign_keys=[assignee_id])
+    created_by: Mapped[User | None] = relationship(foreign_keys=[created_by_id])
     actor_links: Mapped[list[CaseActor]] = relationship(
         back_populates="case", cascade="all, delete-orphan"
     )
     contact_links: Mapped[list[CaseContact]] = relationship(
         back_populates="case", cascade="all, delete-orphan"
     )
-    interactions: Mapped[list["Interaction"]] = relationship(
+    interactions: Mapped[list[Interaction]] = relationship(
         back_populates="case", cascade="all, delete-orphan", order_by="Interaction.occurred_at"
     )
 
@@ -228,7 +228,7 @@ class Attachment(Base):
     uploaded_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
-    uploaded_by: Mapped["User | None"] = relationship()
+    uploaded_by: Mapped[User | None] = relationship()
 
 
 class AuditEvent(Base):

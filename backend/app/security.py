@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import Cookie, Depends, Header, HTTPException, Request
 from sqlalchemy import select
@@ -70,7 +70,7 @@ def verify_password(password: str, stored: str) -> bool:
 
 
 def create_session(db: Session, user: models.User) -> models.Session:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     s = models.Session(
         token=secrets.token_urlsafe(32),
         user_id=user.id,
@@ -88,7 +88,7 @@ def _session_user(db: Session, token: str | None) -> models.User | None:
     s = db.get(models.Session, token)
     if s is None:
         return None
-    if s.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+    if s.expires_at.replace(tzinfo=UTC) < datetime.now(UTC):
         db.delete(s)
         db.commit()
         return None
@@ -147,15 +147,30 @@ def auth_gate(
             raise HTTPException(status_code=401, detail="Invalid API key")
         if _needs_write(request.method) and key.scope != "write":
             raise HTTPException(status_code=403, detail="This key is read-only")
-        key.last_used_at = datetime.now(timezone.utc)
+        key.last_used_at = datetime.now(UTC)
         db.commit()
         return
 
     raise HTTPException(status_code=401, detail="Authentication required")
 
 
-def require_admin(x_admin_token: str | None = Header(default=None)) -> None:
-    if not settings.admin_token:
+def require_admin(
+    x_admin_token: str | None = Header(default=None),
+    trackactor_session: str | None = Cookie(default=None),
+    db: Session = Depends(get_db),
+) -> None:
+    """Key / webhook / user management. Passes on a matching admin token, or an
+    admin session, or - only when nothing is configured to lock the API down - on
+    an open instance."""
+    if (
+        settings.admin_token
+        and x_admin_token
+        and hmac.compare_digest(x_admin_token, settings.admin_token)
+    ):
         return
-    if not x_admin_token or not hmac.compare_digest(x_admin_token, settings.admin_token):
-        raise HTTPException(status_code=401, detail="X-Admin-Token required")
+    user = _session_user(db, trackactor_session)
+    if user is not None and user.is_admin:
+        return
+    if not settings.admin_token and not settings.require_login and not settings.require_key:
+        return  # local, unlocked instance
+    raise HTTPException(status_code=401, detail="Admin token or an admin session required")

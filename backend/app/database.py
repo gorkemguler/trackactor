@@ -44,8 +44,9 @@ def init_db() -> None:
     alembic_version row - stamp it at the baseline first so the upgrade only
     applies what came after.
     """
-    from alembic import command
     from alembic.config import Config
+
+    from alembic import command
 
     from . import models  # noqa: F401  (register tables on Base.metadata)
 

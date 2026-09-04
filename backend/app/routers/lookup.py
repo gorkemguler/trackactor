@@ -77,11 +77,11 @@ def lookup(
     )
     for c in matched:
         cn = c.normalized or ""
+        norm_partial = bool(norm) and norm in cn
+        raw_partial = bool(raw_lower) and raw_lower in c.value.lower()
         if norm and cn == norm:
             match = "exact"
-        elif norm and norm in cn:
-            match = "partial"
-        elif raw_lower and raw_lower in c.value.lower():
+        elif norm_partial or raw_partial:
             match = "partial"
         else:
             continue

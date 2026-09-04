@@ -203,7 +203,7 @@ içinde bir bookmarklet var.
 - `TRACKACTOR_CORS_ORIGINS` — yerel geliştirmede API'yi çağırmasına izin verilen origin'ler (virgülle ayrılmış)
 - `TRACKACTOR_REQUIRE_KEY` — `true` iken her `/api` çağrısı `X-API-Key` ister; yazma işlemleri `write` kapsamlı key ister (varsayılan `false`)
 - `TRACKACTOR_REQUIRE_LOGIN` — `true` iken web arayüzü giriş ekranı gösterir ve `/api` oturum çerezi ister (otomasyon için API key yine geçerli)
-- `TRACKACTOR_ADMIN_TOKEN` — `/api/keys`, `/api/webhooks` ve kullanıcı oluşturmayı korur; boşsa bu uçlar açık
+- `TRACKACTOR_ADMIN_TOKEN` — `/api/keys`, `/api/webhooks` ve kullanıcı oluşturmayı korur. Sadece hiçbir kilit yokken açık; `REQUIRE_KEY` ya da `REQUIRE_LOGIN` açıldığında bu token'la ya da admin oturumuyla erişilir.
 - `TRACKACTOR_DATA_DIR` — kanıt dosyalarının yazıldığı yer (varsayılan `./data`)
 - `TRACKACTOR_MAX_UPLOAD_MB` — ek dosya boyut sınırı (varsayılan `25`)
 

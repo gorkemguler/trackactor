@@ -1,9 +1,8 @@
 """Alembic environment. URL and metadata come from the app, not alembic.ini."""
 
 from alembic import context
-
-from app.database import Base, engine
 from app import models  # noqa: F401  (register tables on Base.metadata)
+from app.database import Base, engine
 
 target_metadata = Base.metadata
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 from fastapi import BackgroundTasks
@@ -83,14 +83,14 @@ def _post(hook: models.Webhook, body: bytes) -> int:
 
 def _deliver(event: str, data: dict) -> None:
     body = json.dumps(
-        {"event": event, "at": datetime.now(timezone.utc).isoformat(), "data": data},
+        {"event": event, "at": datetime.now(UTC).isoformat(), "data": data},
         default=str,
     ).encode()
 
     db = SessionLocal()
     try:
         for hook in _subscribers(db, event):
-            hook.last_attempt_at = datetime.now(timezone.utc)
+            hook.last_attempt_at = datetime.now(UTC)
             try:
                 hook.last_status = _post(hook, body)
                 hook.failure_count = 0
@@ -105,12 +105,12 @@ def _deliver(event: str, data: dict) -> None:
 def send_test(hook: models.Webhook) -> dict:
     """Synchronous single POST for the 'test' button."""
     body = json.dumps(
-        {"event": "ping", "at": datetime.now(timezone.utc).isoformat(), "data": {"hook_id": hook.id}},
+        {"event": "ping", "at": datetime.now(UTC).isoformat(), "data": {"hook_id": hook.id}},
         default=str,
     ).encode()
     try:
         status = _post(hook, body)
         ok = status < 400
         return {"ok": ok, "status": status}
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return {"ok": False, "status": None, "error": str(e)}

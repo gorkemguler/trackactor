@@ -27,7 +27,7 @@ def normalize_identifier(raw: str) -> str:
     if not raw:
         return ""
 
-    value = raw.strip().strip("​").strip()
+    value = raw.strip().strip("\u200b").strip()  # \u200b = zero-width space, common in pasted handles
     if not value:
         return ""
 

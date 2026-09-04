@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response
 from sqlalchemy import func, select
@@ -141,7 +141,7 @@ def export_case(case_id: int, response: Response, db: Session = Depends(get_db))
         .order_by(models.AuditEvent.at)
     ).all()
     return {
-        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "exported_at": datetime.now(UTC).isoformat(),
         "case": detail,
         "actors": [
             schemas.ActorDetail(
@@ -213,7 +213,7 @@ def add_link(
     if payload.actor_id is not None:
         if db.get(models.Actor, payload.actor_id) is None:
             raise HTTPException(status_code=404, detail="actor_id not found")
-        if not any(l.actor_id == payload.actor_id for l in case.actor_links):
+        if not any(x.actor_id == payload.actor_id for x in case.actor_links):
             case.actor_links.append(
                 models.CaseActor(actor_id=payload.actor_id, note=payload.note)
             )
@@ -221,7 +221,7 @@ def add_link(
     if payload.contact_id is not None:
         if db.get(models.Contact, payload.contact_id) is None:
             raise HTTPException(status_code=404, detail="contact_id not found")
-        if not any(l.contact_id == payload.contact_id for l in case.contact_links):
+        if not any(x.contact_id == payload.contact_id for x in case.contact_links):
             case.contact_links.append(
                 models.CaseContact(
                     contact_id=payload.contact_id,
@@ -306,7 +306,7 @@ def add_case_contact(
     elif payload.actor_id is not None and contact.actor_id is None:
         contact.actor_id = payload.actor_id
 
-    if not any(l.contact_id == contact.id for l in case.contact_links):
+    if not any(x.contact_id == contact.id for x in case.contact_links):
         case.contact_links.append(
             models.CaseContact(contact_id=contact.id, outreach_handle=payload.outreach_handle)
         )
@@ -351,7 +351,7 @@ def add_interaction(
         case_id=case_id,
         contact_id=payload.contact_id,
         direction=payload.direction,
-        occurred_at=payload.occurred_at or datetime.now(timezone.utc),
+        occurred_at=payload.occurred_at or datetime.now(UTC),
         summary=payload.summary,
         analyst=payload.analyst,
     )

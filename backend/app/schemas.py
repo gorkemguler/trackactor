@@ -193,7 +193,7 @@ class CaseOut(ORMModel, CaseBase):
 class CaseDetail(CaseOut):
     actors: list[LinkedActor] = Field(default_factory=list)
     contacts: list[LinkedContact] = Field(default_factory=list)
-    interactions: list["InteractionOut"] = Field(default_factory=list)
+    interactions: list[InteractionOut] = Field(default_factory=list)
 
 
 class CaseLinkRequest(BaseModel):
@@ -350,7 +350,7 @@ class CapturePayload(BaseModel):
 
 
 class CaptureResult(BaseModel):
-    case: "CaseDetail"
+    case: CaseDetail
     created: dict[str, bool]
 
 
@@ -458,7 +458,7 @@ class ImportRequest(BaseModel):
 
 
 class ImportResult(BaseModel):
-    case: "CaseDetail"
+    case: CaseDetail
     case_created: bool
     actors_created: int
     contacts_created: int

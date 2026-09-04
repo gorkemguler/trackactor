@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -92,7 +92,7 @@ def add_interaction(
         case_id=case.id,
         contact_id=contact.id if contact else None,
         direction=spec.direction,
-        occurred_at=spec.occurred_at or datetime.now(timezone.utc),
+        occurred_at=spec.occurred_at or datetime.now(UTC),
         summary=spec.summary,
         analyst=spec.analyst or default_analyst,
     )

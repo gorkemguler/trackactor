@@ -1,0 +1,19 @@
+target-version = "py312"
+line-length = 100
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "PIE"]
+ignore = [
+    "B008",    # function call in default arg - the FastAPI Depends()/Query() idiom
+    "E501",    # long lines are fine here
+    "SIM102",  # nested ifs are sometimes clearer
+    "SIM105",  # try/except/pass reads fine
+    "SIM115",  # NamedTemporaryFile(delete=False) in test scaffolding
+    "UP046",   # keep `Generic[T]` - PEP 695 syntax + pydantic is fiddly
+    "UP047",
+    "PIE810",  # a couple of explicit startswith calls
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["E402"]
+"alembic/*" = ["E402"]

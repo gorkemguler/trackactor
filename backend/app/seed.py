@@ -5,7 +5,7 @@
 """
 
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
@@ -14,7 +14,7 @@ from .models import Actor, Case, CaseActor, CaseContact, Contact, Interaction, U
 from .normalize import normalize_identifier
 from .security import hash_password
 
-now = datetime.now(timezone.utc)
+now = datetime.now(UTC)
 
 
 def contact(**kw):

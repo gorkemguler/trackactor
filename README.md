@@ -200,7 +200,7 @@ installing anything, there's a bookmarklet in
 - `TRACKACTOR_CORS_ORIGINS` — comma-separated origins allowed to call the API in local dev
 - `TRACKACTOR_REQUIRE_KEY` — when `true`, every `/api` call needs an `X-API-Key`; writes need a `write`-scoped key (default `false`)
 - `TRACKACTOR_REQUIRE_LOGIN` — when `true`, the web UI shows a login screen and `/api` needs a session cookie (an API key still works for automation)
-- `TRACKACTOR_ADMIN_TOKEN` — guards `/api/keys`, `/api/webhooks` and user creation; empty means those routes are open
+- `TRACKACTOR_ADMIN_TOKEN` — guards `/api/keys`, `/api/webhooks` and user creation. Open only on an otherwise-unlocked instance; once `REQUIRE_KEY` or `REQUIRE_LOGIN` is on, reach them with this token or an admin session.
 - `TRACKACTOR_DATA_DIR` — where evidence files are written (default `./data`)
 - `TRACKACTOR_MAX_UPLOAD_MB` — attachment size cap (default `25`)
 

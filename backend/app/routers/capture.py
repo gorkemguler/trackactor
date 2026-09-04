@@ -4,11 +4,12 @@ extension: grab a case id from a CTI platform, grab a handle from a chat, done."
 
 from __future__ import annotations
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from sqlalchemy.orm import Session, selectinload
 
 from .. import events, models, schemas, services
 from ..activity import touch_seen
+from ..audit import record
 from ..database import get_db
 from ..serializers import case_detail
 
@@ -27,6 +28,7 @@ _DETAIL_OPTS = (
 def capture(
     payload: schemas.CapturePayload,
     background: BackgroundTasks,
+    request: Request,
     db: Session = Depends(get_db),
 ):
     created = {"case": False, "actor": False, "contact": False, "interaction": False}
@@ -50,6 +52,14 @@ def capture(
         created["interaction"] = True
 
     touch_seen(contact=contact, actor=actor)
+
+    did = [k for k, v in created.items() if v] or ["linked"]
+    record(
+        db, request,
+        action="create" if created["case"] else "update",
+        entity_type="case", entity_id=case.id,
+        summary="capture: " + ", ".join(did),
+    )
     db.commit()
 
     case = db.get(models.Case, case.id, options=list(_DETAIL_OPTS))

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Fix: attachment responses 500'd when an authenticated user uploaded (the
+  serializer read the `User` relationship into a string field).
+- `/api/capture` now writes to the audit trail like every other write path.
+- `/api/keys`, `/api/webhooks` and user creation now also accept an admin
+  **session** - and they close when the API is locked (`REQUIRE_KEY` /
+  `REQUIRE_LOGIN`) but no `ADMIN_TOKEN` is set, instead of staying open.
+- Dropped the unused `python-dateutil` dependency; added a `ruff.toml`.
+
 ## 0.6.0
 
 - Import a case from a MISP event, a TheHive case or a STIX 2.1 bundle

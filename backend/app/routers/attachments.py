@@ -24,9 +24,18 @@ router = APIRouter(tags=["attachments"])
 
 
 def _out(a: models.Attachment) -> schemas.AttachmentOut:
-    data = schemas.AttachmentOut.model_validate(a).model_dump()
-    data["uploaded_by"] = a.uploaded_by.username if a.uploaded_by else None
-    return schemas.AttachmentOut(**data)
+    return schemas.AttachmentOut(
+        id=a.id,
+        case_id=a.case_id,
+        interaction_id=a.interaction_id,
+        filename=a.filename,
+        content_type=a.content_type,
+        size=a.size,
+        sha256=a.sha256,
+        tlp=a.tlp,
+        uploaded_by=a.uploaded_by.username if a.uploaded_by else None,
+        created_at=a.created_at,
+    )
 
 
 @router.get("/api/cases/{case_id}/attachments", response_model=list[schemas.AttachmentOut])
@@ -98,7 +107,7 @@ def download_attachment(att_id: int, db: Session = Depends(get_db)):
     try:
         data = storage.load(att.storage_key)
     except FileNotFoundError:
-        raise HTTPException(status_code=410, detail="file is gone from storage")
+        raise HTTPException(status_code=410, detail="file is gone from storage") from None
     return Response(
         content=data,
         media_type=att.content_type,

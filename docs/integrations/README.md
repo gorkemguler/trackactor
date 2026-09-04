@@ -97,7 +97,25 @@ the failure on the webhook row.
 `read` key + cron:
 
 ```bash
-curl -s -H "X-API-Key: $KEY" \
-  'localhost:8080/api/interactions?direction=inbound&limit=200' \
-  > "inbound-$(date +%F).json"
+curl -s -H "X-API-Key: $KEY" localhost:8080/api/export/cases.csv \
+  > "cases-$(date +%F).csv"
+curl -s -H "X-API-Key: $KEY" localhost:8080/api/export/interactions.csv \
+  > "interactions-$(date +%F).csv"
 ```
+
+Per-case handoff bundle (case + actors + contacts + log + audit, one JSON file):
+
+```bash
+curl -s -H "X-API-Key: $KEY" localhost:8080/api/cases/42/export > case-42.json
+```
+
+## Recipe 4 — import from your platform
+
+```bash
+curl -X POST localhost:8080/api/import -H "X-API-Key: $KEY" \
+  -H 'content-type: application/json' \
+  -d "{\"platform\": \"stix\", \"payload\": $(cat bundle.json)}"
+```
+
+`platform` is `misp`, `thehive` or `stix`. Mapping is best-effort; the response
+`notes` say what wasn't mapped.

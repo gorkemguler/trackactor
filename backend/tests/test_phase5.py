@@ -1,7 +1,5 @@
 """v0.6 - importers, attachments, dedup."""
 
-import io
-
 # --- 5.1 importers ---------------------------------------------------
 
 STIX_BUNDLE = {
@@ -148,6 +146,27 @@ def test_attachment_records_audit(client):
     )
     ev = client.get("/api/audit", params={"entity_type": "case", "entity_id": case["id"]}).json()
     assert any("attached a.txt" in e["summary"] for e in ev["items"])
+
+
+def test_attachment_serializes_with_an_uploader(client):
+    from app.database import SessionLocal
+    from app.models import User
+    from app.security import hash_password
+
+    db = SessionLocal()
+    db.add(User(username="up1", password_hash=hash_password("pw123456")))
+    db.commit()
+    db.close()
+    client.post("/api/auth/login", json={"username": "up1", "password": "pw123456"})
+
+    case = _case(client, "ATT-4")
+    r = client.post(
+        f"/api/cases/{case['id']}/attachments",
+        files={"file": ("e.txt", b"x", "text/plain")},
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["uploaded_by"] == "up1"
+    assert client.get(f"/api/cases/{case['id']}/attachments").json()[0]["uploaded_by"] == "up1"
 
 
 # --- 5.4 dedup assist ------------------------------------------
