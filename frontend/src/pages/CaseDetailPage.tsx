@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, useApi } from "../api";
 import { useEnums } from "../App";
-import type { Actor, CaseDetail, Contact, Page } from "../types";
+import History from "../History";
+import type { Actor, CaseDetail, Contact, Page, User } from "../types";
 import {
   Badge,
   ErrorNote,
@@ -19,6 +20,7 @@ export default function CaseDetailPage() {
   const { data: c, error, refetch } = useApi<CaseDetail>(`/cases/${id}`, [id]);
   const { data: actors } = useApi<Page<Actor>>("/actors?limit=200");
   const { data: contacts } = useApi<Page<Contact>>("/contacts?limit=200");
+  const { data: users } = useApi<User[]>("/users");
 
   const [busyErr, setBusyErr] = useState<string | null>(null);
   const [showLink, setShowLink] = useState(false);
@@ -100,8 +102,32 @@ export default function CaseDetailPage() {
             </dd>
             <dt>Analyst</dt>
             <dd>{c.analyst ?? "—"}</dd>
+            <dt>Assignee</dt>
+            <dd>
+              <select
+                value={c.assignee ?? ""}
+                onChange={(e) => {
+                  const u = users?.find((x) => x.username === e.target.value);
+                  patch({ assignee_id: u ? u.id : null });
+                }}
+                style={{ maxWidth: 180 }}
+              >
+                <option value="">unassigned</option>
+                {c.assignee && !users?.some((u) => u.username === c.assignee) && (
+                  <option value={c.assignee}>{c.assignee}</option>
+                )}
+                {users?.map((u) => (
+                  <option key={u.id} value={u.username}>
+                    {u.username}
+                  </option>
+                ))}
+              </select>
+            </dd>
             <dt>Created</dt>
-            <dd className="muted">{fmtDateTime(c.created_at)}</dd>
+            <dd className="muted">
+              {fmtDateTime(c.created_at)}
+              {c.created_by && ` · by ${c.created_by}`}
+            </dd>
             <dt>Tags</dt>
             <dd className="row wrap">
               {c.tags.length ? (
@@ -211,6 +237,10 @@ export default function CaseDetailPage() {
               </div>
             ))}
         </div>
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <History entityType="case" entityId={id!} />
       </div>
 
       {showLink && (

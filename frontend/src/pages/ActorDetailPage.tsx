@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, useApi } from "../api";
 import { useEnums } from "../App";
+import History from "../History";
 import type { Actor } from "../types";
 import { Badge, ErrorNote, Modal, TlpBadge, fmtDate, fmtDateTime } from "../ui";
 
@@ -125,6 +126,10 @@ export default function ActorDetailPage() {
             </table>
           </div>
         </div>
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <History entityType="actor" entityId={id!} />
       </div>
 
       {showContact && (

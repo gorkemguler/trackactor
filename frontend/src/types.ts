@@ -90,6 +90,8 @@ export interface CaseSummary {
   actor_count: number;
   interaction_count: number;
   last_interaction_at: string | null;
+  assignee: string | null;
+  created_by: string | null;
 }
 
 export interface CaseDetail extends CaseSummary {
@@ -180,4 +182,29 @@ export interface Webhook {
   last_attempt_at: string | null;
   failure_count: number;
   created_at: string;
+}
+
+export interface User {
+  id: number;
+  username: string;
+  display_name: string | null;
+  is_admin: boolean;
+  disabled: boolean;
+}
+
+export interface MetaConfig {
+  version: string;
+  require_login: boolean;
+  require_key: boolean;
+}
+
+export interface AuditEvent {
+  id: number;
+  at: string;
+  user_label: string;
+  action: string;
+  entity_type: string;
+  entity_id: number | null;
+  summary: string;
+  changes: Record<string, [unknown, unknown]>;
 }
