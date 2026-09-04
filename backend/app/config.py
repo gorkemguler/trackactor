@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     require_login: bool = False
     session_ttl_hours: int = 12
 
+    # Evidence files land here (a path, one file per attachment).
+    data_dir: str = "./data"
+    max_upload_mb: int = 25
+
+    # Connection pool (used for non-sqlite URLs).
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
+
     # Guards the /api/keys and /api/webhooks management routes. When empty those
     # routes are open (fine for a local instance); set it once you expose them.
     admin_token: str = ""

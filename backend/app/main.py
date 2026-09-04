@@ -12,12 +12,14 @@ from .config import settings
 from .database import init_db
 from .routers import (
     actors,
+    attachments,
     audit,
     auth,
     capture,
     cases,
     contacts,
     export,
+    imports,
     interactions,
     keys,
     lookup,
@@ -61,6 +63,8 @@ app.include_router(contacts.router)
 app.include_router(interactions.router)
 app.include_router(lookup.router)
 app.include_router(capture.router)
+app.include_router(imports.router)
+app.include_router(attachments.router)
 app.include_router(stats.router)
 app.include_router(audit.router)
 app.include_router(export.router)

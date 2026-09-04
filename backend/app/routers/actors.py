@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from difflib import SequenceMatcher
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -9,7 +11,7 @@ from sqlalchemy.orm import Session, selectinload
 from .. import models, schemas
 from ..audit import diff, record
 from ..database import get_db
-from ..normalize import normalize_identifier
+from ..normalize import normalize_identifier, normalize_name
 from ..serializers import actor_detail, contact_out
 
 router = APIRouter(prefix="/api/actors", tags=["actors"])
@@ -24,6 +26,31 @@ def _get_actor(db: Session, actor_id: int) -> models.Actor:
     if actor is None:
         raise HTTPException(status_code=404, detail="Actor not found")
     return actor
+
+
+@router.get("/similar", response_model=list[schemas.ActorOut])
+def similar_actors(name: str = Query(min_length=1), db: Session = Depends(get_db)):
+    """Advisory near-duplicate check for the new-actor form."""
+    q = normalize_name(name)
+    out: list[tuple[float, models.Actor]] = []
+    for a in db.scalars(select(models.Actor)):
+        names = [normalize_name(a.name), *(normalize_name(x) for x in (a.aliases or []))]
+        best = max(
+            (
+                1.0
+                if q == n
+                else 0.9
+                if n and (q in n or n in q)
+                else SequenceMatcher(None, q, n).ratio()
+                for n in names
+                if n
+            ),
+            default=0.0,
+        )
+        if best >= 0.7:
+            out.append((best, a))
+    out.sort(key=lambda t: t[0], reverse=True)
+    return [schemas.ActorOut.model_validate(a) for _, a in out[:5]]
 
 
 @router.get("", response_model=schemas.Page[schemas.ActorDetail])

@@ -4,16 +4,12 @@ extension: grab a case id from a CTI platform, grab a handle from a chat, done."
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 from fastapi import APIRouter, BackgroundTasks, Depends
-from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from .. import events, models, schemas
+from .. import events, models, schemas, services
 from ..activity import touch_seen
 from ..database import get_db
-from ..normalize import normalize_identifier
 from ..serializers import case_detail
 
 router = APIRouter(prefix="/api/capture", tags=["capture"])
@@ -36,86 +32,24 @@ def capture(
     created = {"case": False, "actor": False, "contact": False, "interaction": False}
     status_changed = False
 
-    # --- case ---------------------------------------------------------
-    case = db.scalar(select(models.Case).where(models.Case.case_id == payload.case.case_id))
-    if case is None:
-        case = models.Case(
-            case_id=payload.case.case_id,
-            title=payload.case.title or payload.case.case_id,
-            source_platform=payload.case.source_platform or "Manual",
-            source_url=payload.case.source_url,
-            status=payload.case.status or "open",
-            priority=payload.case.priority or "medium",
-            analyst=payload.case.analyst,
-        )
-        db.add(case)
-        db.flush()
-        created["case"] = True
-    elif payload.case.source_url and not case.source_url:
-        case.source_url = payload.case.source_url
+    case, created["case"] = services.upsert_case(db, payload.case)
 
-    # --- actor -------------------------------------------------------
     actor = None
     if payload.actor:
-        actor = db.scalar(select(models.Actor).where(models.Actor.name == payload.actor.name))
-        if actor is None:
-            actor = models.Actor(
-                name=payload.actor.name,
-                actor_type=payload.actor.actor_type,
-                aliases=payload.actor.aliases,
-            )
-            db.add(actor)
-            db.flush()
-            created["actor"] = True
-        if not any(link.actor_id == actor.id for link in case.actor_links):
-            db.add(models.CaseActor(case_id=case.id, actor_id=actor.id))
+        actor, created["actor"] = services.upsert_actor(db, case, payload.actor)
 
-    # --- contact ---------------------------------------------------
     contact = None
     if payload.contact:
-        norm = normalize_identifier(payload.contact.value)
-        stmt = select(models.Contact).where(models.Contact.normalized == norm)
-        stmt = stmt.where(
-            models.Contact.actor_id == actor.id
-            if actor is not None
-            else models.Contact.actor_id.is_(None)
-        )
-        contact = db.scalar(stmt)
-        if contact is None:
-            contact = models.Contact(
-                actor_id=actor.id if actor else None,
-                channel_type=payload.contact.channel_type,
-                value=payload.contact.value,
-                normalized=norm,
-                label=payload.contact.label,
-            )
-            db.add(contact)
-            db.flush()
-            created["contact"] = True
-        elif actor is not None and contact.actor_id is None:
-            contact.actor_id = actor.id
-        if not any(link.contact_id == contact.id for link in case.contact_links):
-            db.add(models.CaseContact(case_id=case.id, contact_id=contact.id))
+        contact, created["contact"] = services.upsert_contact(db, case, payload.contact, actor)
 
-    # --- message --------------------------------------------------
     new_interaction = None
     if payload.interaction:
-        new_interaction = models.Interaction(
-            case_id=case.id,
-            contact_id=contact.id if contact else None,
-            direction=payload.interaction.direction,
-            occurred_at=payload.interaction.occurred_at or datetime.now(timezone.utc),
-            summary=payload.interaction.summary,
-            analyst=payload.interaction.analyst or payload.case.analyst,
+        new_interaction, status_changed = services.add_interaction(
+            db, case, contact, payload.interaction, payload.case.analyst
         )
-        db.add(new_interaction)
         created["interaction"] = True
-        if payload.interaction.direction == "inbound" and case.status == "awaiting_response":
-            case.status = "responded"
-            status_changed = True
 
     touch_seen(contact=contact, actor=actor)
-
     db.commit()
 
     case = db.get(models.Case, case.id, options=list(_DETAIL_OPTS))

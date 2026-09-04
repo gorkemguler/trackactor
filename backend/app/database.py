@@ -12,9 +12,15 @@ from .config import settings
 
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-connect_args = {"check_same_thread": False} if settings.db_url.startswith("sqlite") else {}
+_is_sqlite = settings.db_url.startswith("sqlite")
+_engine_kw: dict = {"future": True, "pool_pre_ping": True}
+if _is_sqlite:
+    _engine_kw["connect_args"] = {"check_same_thread": False}
+else:
+    _engine_kw["pool_size"] = settings.db_pool_size
+    _engine_kw["max_overflow"] = settings.db_max_overflow
 
-engine = create_engine(settings.db_url, connect_args=connect_args, future=True)
+engine = create_engine(settings.db_url, **_engine_kw)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
 

@@ -14,6 +14,18 @@ from ..serializers import contact_with_actor
 router = APIRouter(prefix="/api/contacts", tags=["contacts"])
 
 
+@router.get("/similar", response_model=list[schemas.ContactWithActor])
+def similar_contacts(value: str = Query(min_length=1), db: Session = Depends(get_db)):
+    """Contacts that normalise to the same identifier - likely the same channel."""
+    norm = normalize_identifier(value)
+    rows = db.scalars(
+        select(models.Contact)
+        .options(selectinload(models.Contact.actor))
+        .where(models.Contact.normalized == norm)
+    ).all()
+    return [contact_with_actor(c) for c in rows]
+
+
 @router.get("", response_model=schemas.Page[schemas.ContactWithActor])
 def list_contacts(
     q: str | None = Query(default=None, description="substring match on value / normalized"),

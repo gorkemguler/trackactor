@@ -320,6 +320,7 @@ class CaptureCase(BaseModel):
     status: str | None = None
     priority: str | None = None
     analyst: str | None = None
+    objective: str | None = None
 
 
 class CaptureActor(BaseModel):
@@ -432,6 +433,38 @@ class MetaConfig(BaseModel):
     require_key: bool
 
 
+# --- Attachments ---------------------------------------------
+
+
+class AttachmentOut(ORMModel):
+    id: int
+    case_id: int
+    interaction_id: int | None = None
+    filename: str
+    content_type: str
+    size: int
+    sha256: str
+    tlp: str
+    uploaded_by: str | None = None
+    created_at: datetime
+
+
+# --- Import ------------------------------------------------
+
+
+class ImportRequest(BaseModel):
+    platform: str  # misp | thehive | stix
+    payload: dict
+
+
+class ImportResult(BaseModel):
+    case: "CaseDetail"
+    case_created: bool
+    actors_created: int
+    contacts_created: int
+    notes: list[str] = Field(default_factory=list)
+
+
 # --- Audit ------------------------------------------------
 
 
@@ -448,3 +481,4 @@ class AuditEventOut(ORMModel):
 
 CaseDetail.model_rebuild()
 CaptureResult.model_rebuild()
+ImportResult.model_rebuild()

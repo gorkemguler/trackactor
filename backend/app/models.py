@@ -211,6 +211,26 @@ class Session(Base):
     user: Mapped[User] = relationship()
 
 
+class Attachment(Base):
+    __tablename__ = "attachments"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    case_id: Mapped[int] = mapped_column(ForeignKey("cases.id", ondelete="CASCADE"), index=True)
+    interaction_id: Mapped[int | None] = mapped_column(
+        ForeignKey("interactions.id", ondelete="SET NULL")
+    )
+    filename: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str] = mapped_column(String(120), default="application/octet-stream")
+    size: Mapped[int] = mapped_column(Integer, default=0)
+    sha256: Mapped[str] = mapped_column(String(64), index=True)
+    tlp: Mapped[str] = mapped_column(String(10), default="AMBER")
+    storage_key: Mapped[str] = mapped_column(String(255))
+    uploaded_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    uploaded_by: Mapped["User | None"] = relationship()
+
+
 class AuditEvent(Base):
     __tablename__ = "audit_events"
 
