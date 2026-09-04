@@ -11,6 +11,10 @@ venv/
 *.sqlite
 *.sqlite3
 
+# Runtime data (attachment storage)
+backend/data/
+data/
+
 # Env
 .env
 

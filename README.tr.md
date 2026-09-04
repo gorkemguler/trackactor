@@ -70,6 +70,10 @@ olur ve aynı vakaya çıkar.
 
 ![Aktör detayı](docs/screenshots/actor-detail.png)
 
+**İçe aktarma** — MISP, TheHive ya da bir STIX 2.1 paketinden vaka çek.
+
+![İçe aktarma](docs/screenshots/import.png)
+
 ## Parçalar nasıl birleşiyor
 
 - **Case (Vaka)** — takip edilen bir tema; dış `case_id`'niz ve kaynak
@@ -80,6 +84,7 @@ olur ve aynı vakaya çıkar.
   `t.me/x`, `@x` ve `tg://resolve?domain=x` eşleşsin diye normalize edilmiş
   biçimiyle saklanır.
 - **Interaction (Etkileşim)** — bir vakaya işlenmiş gelen ya da giden bir mesaj.
+- **Attachment (Ek)** — bir vakaya (ya da tek bir mesaja) iliştirilmiş kanıt dosyası; TLP etiketli ve hash'li.
 
 Bir vaka bir veya daha fazla aktöre ve/veya doğrudan belirli iletişim
 kimliklerine bağlanır; böylece kimlik henüz bir aktöre atfedilmemiş olsa bile
@@ -159,6 +164,10 @@ curl 'localhost:8000/api/lookup?q=https://t.me/n3tw0rm_deals'
 | `POST` | `/api/cases/{id}/interactions` | bir mesaj işle |
 | `GET` | `/api/cases/{id}/export` | devir için tek parça JSON paketi |
 | `GET` | `/api/export/cases.csv`, `/api/export/interactions.csv` | düz CSV dökümleri |
+| `GET` `POST` | `/api/cases/{id}/attachments` | kanıt dosyaları (multipart yükleme) |
+| `GET` `DELETE` | `/api/attachments/{id}` | ek indir / sil |
+| `POST` | `/api/import` | `misp` / `thehive` / `stix`'ten vaka içe aktar |
+| `GET` | `/api/actors/similar?name=`, `/api/contacts/similar?value=` | yakın-kopya kontrolü |
 | `GET` | `/api/interactions?q=` | mesaj kaydında ara (`case_id`, `actor_id`, `direction` süzgeçleri) |
 | `GET` `POST` | `/api/actors` | aktörler ve takma adları |
 | `POST` | `/api/actors/{id}/contacts` | bir aktöre kanal ekle |
@@ -195,6 +204,8 @@ içinde bir bookmarklet var.
 - `TRACKACTOR_REQUIRE_KEY` — `true` iken her `/api` çağrısı `X-API-Key` ister; yazma işlemleri `write` kapsamlı key ister (varsayılan `false`)
 - `TRACKACTOR_REQUIRE_LOGIN` — `true` iken web arayüzü giriş ekranı gösterir ve `/api` oturum çerezi ister (otomasyon için API key yine geçerli)
 - `TRACKACTOR_ADMIN_TOKEN` — `/api/keys`, `/api/webhooks` ve kullanıcı oluşturmayı korur; boşsa bu uçlar açık
+- `TRACKACTOR_DATA_DIR` — kanıt dosyalarının yazıldığı yer (varsayılan `./data`)
+- `TRACKACTOR_MAX_UPLOAD_MB` — ek dosya boyut sınırı (varsayılan `25`)
 
 İlk hesabı `cd backend && python -m app.users add <ad> --admin` ile oluştur
 (örnek seed ayrıca `analyst` / `analyst` ekler). Key'ler ve webhook'lar arayüzde
@@ -204,6 +215,11 @@ anahtarınla imzalayıp (`X-Trackactor-Signature`) POST eder, üç kez dener.
 
 Şema Alembic ile yönetilir; `init_db()` açılışta `alembic upgrade head` çalıştırır
 ve migration öncesi bir veritabanını otomatik olarak devralır.
+
+Varsayılan SQLite. Postgres için `TRACKACTOR_DB_URL`'i bir
+`postgresql+psycopg://…` URL'ine ayarla ya da paketteki servisi
+`docker compose --profile postgres up` ile çalıştır. Test paketi CI'da her
+ikisine karşı koşar.
 
 ## Teknoloji
 

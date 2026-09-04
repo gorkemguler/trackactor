@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.0
+
+- Import a case from a MISP event, a TheHive case or a STIX 2.1 bundle
+  (`POST /api/import`) - best-effort mapping into case + actors + contacts.
+- Evidence attachments per case (and per message), with a TLP marking and a
+  sha256, stored on disk. `GET/POST /api/cases/{id}/attachments`,
+  `GET/DELETE /api/attachments/{id}`.
+- Duplicate assist: `GET /api/actors/similar`, `GET /api/contacts/similar`;
+  the new-actor form warns on a near match.
+- Postgres: `pool_pre_ping` and a pool size, a `--profile postgres` compose
+  service, and the test suite runs against Postgres in CI.
+
 ## 0.5.0
 
 - Add a channel and link it to a case in one step (`POST /api/cases/{id}/contacts`).

@@ -9,8 +9,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
+COPY alembic ./alembic
+COPY alembic.ini .
 
-ENV TRACKACTOR_DB_URL=sqlite:////data/trackactor.db
+ENV TRACKACTOR_DB_URL=sqlite:////data/trackactor.db \
+    TRACKACTOR_DATA_DIR=/data
 VOLUME ["/data"]
 EXPOSE 8000
 

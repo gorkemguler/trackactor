@@ -8,6 +8,21 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        db: [sqlite, postgres]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: trackactor
+          POSTGRES_DB: trackactor
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s
+          --health-timeout 3s --health-retries 10
+    env:
+      TRACKACTOR_DB_URL: ${{ matrix.db == 'postgres' && 'postgresql+psycopg://postgres:trackactor@localhost:5432/trackactor' || 'sqlite:////tmp/ci.db' }}
     defaults:
       run:
         working-directory: backend
@@ -22,8 +37,6 @@ jobs:
         run: ruff check --select E9,F63,F7,F82 .
       - name: Migrations apply from scratch
         run: python -m alembic upgrade head
-        env:
-          TRACKACTOR_DB_URL: sqlite:////tmp/ci.db
       - run: pytest -q
 
   frontend:
@@ -48,3 +61,12 @@ jobs:
       - uses: actions/checkout@v4
       - run: docker build -t trackactor-backend ./backend
       - run: docker build -t trackactor-web ./frontend
+      - name: Backend container starts and answers /api/health
+        run: |
+          docker run -d --name be -p 8000:8000 trackactor-backend
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:8000/api/health && break
+            sleep 2
+          done
+          curl -sf http://localhost:8000/api/health
+          docker rm -f be

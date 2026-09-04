@@ -4,6 +4,8 @@ services:
     restart: unless-stopped
     environment:
       TRACKACTOR_DB_URL: sqlite:////data/trackactor.db
+      # To run on Postgres instead, start with `--profile postgres` and use:
+      # TRACKACTOR_DB_URL: postgresql+psycopg://trackactor:trackactor@db:5432/trackactor
     volumes:
       - trackactor-data:/data
     expose:
@@ -32,5 +34,22 @@ services:
       timeout: 3s
       retries: 3
 
+  db:
+    image: postgres:16
+    profiles: ["postgres"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: trackactor
+      POSTGRES_PASSWORD: trackactor
+      POSTGRES_DB: trackactor
+    volumes:
+      - trackactor-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "trackactor"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
 volumes:
   trackactor-data:
+  trackactor-pg:

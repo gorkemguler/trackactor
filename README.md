@@ -70,6 +70,10 @@ same key and resolve to the case.
 
 ![Actor detail](docs/screenshots/actor-detail.png)
 
+**Import** — pull a case in from MISP, TheHive or a STIX 2.1 bundle.
+
+![Import](docs/screenshots/import.png)
+
 ## How it fits together
 
 - **Case** — a tracked engagement, keyed by your external `case_id` and its
@@ -78,6 +82,8 @@ same key and resolve to the case.
 - **Contact** — one communication identifier belonging to an actor, stored with a
   normalised form so `t.me/x`, `@x` and `tg://resolve?domain=x` all match.
 - **Interaction** — an inbound or outbound message logged against a case.
+- **Attachment** — an evidence file on a case (or a single message), TLP-marked
+  and hashed.
 
 A case links to one or more actors and/or directly to specific contacts, so a
 reply still resolves when the identifier isn't attributed to an actor yet. Log an
@@ -156,6 +162,10 @@ curl 'localhost:8000/api/lookup?q=https://t.me/n3tw0rm_deals'
 | `POST` | `/api/cases/{id}/interactions` | log a message |
 | `GET` | `/api/cases/{id}/export` | self-contained JSON bundle for handoff |
 | `GET` | `/api/export/cases.csv`, `/api/export/interactions.csv` | flat CSV dumps |
+| `GET` `POST` | `/api/cases/{id}/attachments` | evidence files (multipart upload) |
+| `GET` `DELETE` | `/api/attachments/{id}` | download / remove an attachment |
+| `POST` | `/api/import` | import a case from `misp` / `thehive` / `stix` |
+| `GET` | `/api/actors/similar?name=`, `/api/contacts/similar?value=` | near-duplicate check |
 | `GET` | `/api/interactions?q=` | search the message log (`case_id`, `actor_id`, `direction` filters) |
 | `GET` `POST` | `/api/actors` | actors and their aliases |
 | `POST` | `/api/actors/{id}/contacts` | add a channel to an actor |
@@ -191,6 +201,8 @@ installing anything, there's a bookmarklet in
 - `TRACKACTOR_REQUIRE_KEY` — when `true`, every `/api` call needs an `X-API-Key`; writes need a `write`-scoped key (default `false`)
 - `TRACKACTOR_REQUIRE_LOGIN` — when `true`, the web UI shows a login screen and `/api` needs a session cookie (an API key still works for automation)
 - `TRACKACTOR_ADMIN_TOKEN` — guards `/api/keys`, `/api/webhooks` and user creation; empty means those routes are open
+- `TRACKACTOR_DATA_DIR` — where evidence files are written (default `./data`)
+- `TRACKACTOR_MAX_UPLOAD_MB` — attachment size cap (default `25`)
 
 Create the first account with `cd backend && python -m app.users add <name> --admin`
 (the example seed also adds `analyst` / `analyst`). Manage keys and webhooks from
@@ -200,6 +212,10 @@ secret in `X-Trackactor-Signature` and retried three times.
 
 The schema is managed with Alembic; `init_db()` runs `alembic upgrade head` on
 startup and adopts a pre-migration database automatically.
+
+SQLite is the default. For Postgres, set `TRACKACTOR_DB_URL` to a
+`postgresql+psycopg://…` URL, or run the bundled service with
+`docker compose --profile postgres up`. The test suite runs against both in CI.
 
 ## Stack
 
