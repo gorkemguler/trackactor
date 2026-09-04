@@ -61,6 +61,10 @@ olur ve aynı vakaya çıkar.
 
 ![Ayarlar](docs/screenshots/settings.png)
 
+**Denetim (Audit)** — her değişiklik, kimin yaptığı ve öncesi/sonrası.
+
+![Denetim](docs/screenshots/audit.png)
+
 ## Parçalar nasıl birleşiyor
 
 - **Case (Vaka)** — takip edilen bir tema; dış `case_id`'niz ve kaynak
@@ -75,7 +79,9 @@ olur ve aynı vakaya çıkar.
 Bir vaka bir veya daha fazla aktöre ve/veya doğrudan belirli iletişim
 kimliklerine bağlanır; böylece kimlik henüz bir aktöre atfedilmemiş olsa bile
 yanıt yine de vakaya çözülür. `awaiting_response` durumundaki bir vakaya gelen
-bir mesaj işlediğinde durum kendiliğinden `responded` olur.
+bir mesaj işlediğinde durum kendiliğinden `responded` olur. Vakanın bir atanan
+kişisi ve oluşturanı vardır; vaka ve aktördeki her değişiklik öncesi/sonrası
+farkıyla denetim kaydına düşer.
 
 ## Çalıştırma
 
@@ -150,6 +156,9 @@ curl 'localhost:8000/api/lookup?q=https://t.me/n3tw0rm_deals'
 | `POST` | `/api/actors/{id}/contacts` | bir aktöre kanal ekle |
 | `GET` `POST` | `/api/contacts` | iletişim kimliklerinde ara |
 | `GET` | `/api/stats` | panel sayaçları |
+| `POST` | `/api/auth/login` `logout`, `GET /api/auth/me` | web arayüzü için oturum girişi |
+| `GET` | `/api/audit` | denetim kaydı (`entity_type`, `entity_id` süzgeçleri) |
+| `GET` `POST` `PATCH` | `/api/users` | hesaplar (listeleme herkese açık; oluşturma/düzenleme admin korumalı) |
 | `GET` `POST` `DELETE` | `/api/keys` | API key yönetimi (admin korumalı) |
 | `GET` `POST` `PATCH` `DELETE` | `/api/webhooks` | giden webhook yönetimi (admin korumalı) |
 
@@ -174,24 +183,28 @@ vakaya işler. Bkz. [extension/README.md](extension/README.md).
 - `TRACKACTOR_DB_URL` — SQLAlchemy URL'i, varsayılan `sqlite:///./trackactor.db`
 - `TRACKACTOR_CORS_ORIGINS` — yerel geliştirmede API'yi çağırmasına izin verilen origin'ler (virgülle ayrılmış)
 - `TRACKACTOR_REQUIRE_KEY` — `true` iken her `/api` çağrısı `X-API-Key` ister; yazma işlemleri `write` kapsamlı key ister (varsayılan `false`)
-- `TRACKACTOR_ADMIN_TOKEN` — `/api/keys` ve `/api/webhooks`'u korur; boşsa bu uçlar açık
+- `TRACKACTOR_REQUIRE_LOGIN` — `true` iken web arayüzü giriş ekranı gösterir ve `/api` oturum çerezi ister (otomasyon için API key yine geçerli)
+- `TRACKACTOR_ADMIN_TOKEN` — `/api/keys`, `/api/webhooks` ve kullanıcı oluşturmayı korur; boşsa bu uçlar açık
 
-Key'ler ve webhook'lar arayüzde **Ayarlar**'dan ya da yukarıdaki uçlardan
-yönetilir. Webhook'lar `interaction.inbound`, `interaction.outbound`,
-`case.status_changed`, `case.created` olaylarını gizli anahtarınla imzalayıp
-(`X-Trackactor-Signature`) POST eder, üç kez dener.
+İlk hesabı `cd backend && python -m app.users add <ad> --admin` ile oluştur
+(örnek seed ayrıca `analyst` / `analyst` ekler). Key'ler ve webhook'lar arayüzde
+**Ayarlar**'dan yönetilir. Webhook'lar `interaction.inbound`,
+`interaction.outbound`, `case.status_changed`, `case.created` olaylarını gizli
+anahtarınla imzalayıp (`X-Trackactor-Signature`) POST eder, üç kez dener.
+
+Şema Alembic ile yönetilir; `init_db()` açılışta `alembic upgrade head` çalıştırır
+ve migration öncesi bir veritabanını otomatik olarak devralır.
 
 ## Teknoloji
 
-Backend'de FastAPI, SQLAlchemy ve SQLite; frontend'de React, TypeScript ve Vite.
-Backend testleri: `cd backend && pytest`.
+Backend'de FastAPI, SQLAlchemy, Alembic ve SQLite; frontend'de React, TypeScript
+ve Vite. Backend testleri: `cd backend && pytest`.
 
 ## Notlar
 
-- Kimlik doğrulama opsiyonel ve kaba (bir key = bir kapsam). Ciddi bir kurulumda
-  yine iç ağda ya da kendi proxy'nin arkasında çalıştır.
+- Kimlik doğrulama opsiyonel ve kaba (bir key = bir kapsam; bir rol = admin ya da
+  değil). Ciddi bir kurulumda yine iç ağda ya da kendi proxy'nin arkasında çalıştır.
 - SQLite bir ekip için yeterli. Büyürsen `TRACKACTOR_DB_URL`'i Postgres'e yönlendir.
-- Henüz şema migration'ı yok — yeni bir kolon SQLite dosyasını yeniden oluşturmayı gerektirir.
 
 ## Lisans
 

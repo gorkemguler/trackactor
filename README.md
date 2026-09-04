@@ -61,6 +61,10 @@ same key and resolve to the case.
 
 ![Settings](docs/screenshots/settings.png)
 
+**Audit** — every change, who made it, and the before/after.
+
+![Audit](docs/screenshots/audit.png)
+
 ## How it fits together
 
 - **Case** — a tracked engagement, keyed by your external `case_id` and its
@@ -73,7 +77,8 @@ same key and resolve to the case.
 A case links to one or more actors and/or directly to specific contacts, so a
 reply still resolves when the identifier isn't attributed to an actor yet. Log an
 inbound message on a case that is `awaiting_response` and it flips to `responded`
-on its own.
+on its own. A case also carries an assignee and a creator, and every change to a
+case or actor lands in the audit trail with a before/after diff.
 
 ## Running it
 
@@ -136,6 +141,7 @@ curl 'localhost:8000/api/lookup?q=https://t.me/n3tw0rm_deals'
 
 | Method | Path | Purpose |
 | --- | --- | --- |
+| `POST` | `/api/auth/login` `logout`, `GET /api/auth/me` | session login for the web UI |
 | `GET` | `/api/lookup?q=` | resolve a handle / link / alias / case id to case(s) |
 | `POST` | `/api/capture` | upsert a case + actor + contact + message and link them, in one call |
 | `GET` `POST` | `/api/cases` | list / create cases |
@@ -147,6 +153,8 @@ curl 'localhost:8000/api/lookup?q=https://t.me/n3tw0rm_deals'
 | `POST` | `/api/actors/{id}/contacts` | add a channel to an actor |
 | `GET` `POST` | `/api/contacts` | search communication identifiers |
 | `GET` | `/api/stats` | dashboard counters |
+| `GET` | `/api/audit` | audit trail (`entity_type`, `entity_id` filters) |
+| `GET` `POST` `PATCH` | `/api/users` | accounts (list open to any user; create/edit admin-guarded) |
 | `GET` `POST` `DELETE` | `/api/keys` | manage API keys (admin-guarded) |
 | `GET` `POST` `PATCH` `DELETE` | `/api/webhooks` | manage outbound webhooks (admin-guarded) |
 
@@ -171,24 +179,29 @@ page. See [extension/README.md](extension/README.md).
 - `TRACKACTOR_DB_URL` — SQLAlchemy URL, default `sqlite:///./trackactor.db`
 - `TRACKACTOR_CORS_ORIGINS` — comma-separated origins allowed to call the API in local dev
 - `TRACKACTOR_REQUIRE_KEY` — when `true`, every `/api` call needs an `X-API-Key`; writes need a `write`-scoped key (default `false`)
-- `TRACKACTOR_ADMIN_TOKEN` — guards `/api/keys` and `/api/webhooks`; empty means those routes are open
+- `TRACKACTOR_REQUIRE_LOGIN` — when `true`, the web UI shows a login screen and `/api` needs a session cookie (an API key still works for automation)
+- `TRACKACTOR_ADMIN_TOKEN` — guards `/api/keys`, `/api/webhooks` and user creation; empty means those routes are open
 
-Manage keys and webhooks from **Settings** in the UI, or the endpoints above.
-Webhooks POST `interaction.inbound`, `interaction.outbound`,
-`case.status_changed` and `case.created`, signed with your secret in
-`X-Trackactor-Signature` and retried three times.
+Create the first account with `cd backend && python -m app.users add <name> --admin`
+(the example seed also adds `analyst` / `analyst`). Manage keys and webhooks from
+**Settings** in the UI. Webhooks POST `interaction.inbound`,
+`interaction.outbound`, `case.status_changed` and `case.created`, signed with your
+secret in `X-Trackactor-Signature` and retried three times.
+
+The schema is managed with Alembic; `init_db()` runs `alembic upgrade head` on
+startup and adopts a pre-migration database automatically.
 
 ## Stack
 
-FastAPI, SQLAlchemy and SQLite on the backend; React, TypeScript and Vite on the
-frontend. Run the backend tests with `cd backend && pytest`.
+FastAPI, SQLAlchemy, Alembic and SQLite on the backend; React, TypeScript and
+Vite on the frontend. Run the backend tests with `cd backend && pytest`.
 
 ## Notes
 
-- Authentication is opt-in and coarse (one key = one scope). For anything
-  serious, still run it on an internal network or behind your own proxy.
+- Authentication is opt-in and coarse (one key = one scope; one role = admin or
+  not). For anything serious, still run it on an internal network or behind your
+  own proxy.
 - SQLite is fine for a team. Point `TRACKACTOR_DB_URL` at Postgres if you outgrow it.
-- No schema migrations yet — a new column means recreating the SQLite file.
 
 ## License
 
