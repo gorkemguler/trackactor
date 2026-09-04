@@ -3,6 +3,7 @@
 </p>
 
 <p align="center">
+  <img src="https://github.com/gorkemguler/trackactor/actions/workflows/ci.yml/badge.svg" alt="CI">
   <img src="https://img.shields.io/badge/python-3.12%2B-3776AB?logo=python&logoColor=white" alt="Python 3.12+">
   <img src="https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
   <img src="https://img.shields.io/badge/UI-React%20%2B%20TS-3178C6?logo=react&logoColor=white" alt="React + TypeScript">
@@ -64,6 +65,10 @@ olur ve aynı vakaya çıkar.
 **Denetim (Audit)** — her değişiklik, kimin yaptığı ve öncesi/sonrası.
 
 ![Denetim](docs/screenshots/audit.png)
+
+**Aktör detayı** — kanallar, tüm vakalardaki konuşma zaman çizelgesi ve geçmiş.
+
+![Aktör detayı](docs/screenshots/actor-detail.png)
 
 ## Parçalar nasıl birleşiyor
 
@@ -149,8 +154,11 @@ curl 'localhost:8000/api/lookup?q=https://t.me/n3tw0rm_deals'
 | `POST` | `/api/capture` | tek çağrıda vaka + aktör + iletişim kimliği + mesaj oluştur/güncelle ve bağla |
 | `GET` `POST` | `/api/cases` | vakaları listele / oluştur |
 | `GET` `PATCH` `DELETE` | `/api/cases/{id}` | aktörleri, kimlikleri ve kaydıyla tek vaka |
-| `POST` | `/api/cases/{id}/links` | bir aktörü veya iletişim kimliğini vakaya bağla |
+| `POST` | `/api/cases/{id}/links` | var olan bir aktörü veya kimliği vakaya bağla |
+| `POST` | `/api/cases/{id}/contacts` | tek adımda kanal oluştur ve bağla |
 | `POST` | `/api/cases/{id}/interactions` | bir mesaj işle |
+| `GET` | `/api/cases/{id}/export` | devir için tek parça JSON paketi |
+| `GET` | `/api/export/cases.csv`, `/api/export/interactions.csv` | düz CSV dökümleri |
 | `GET` | `/api/interactions?q=` | mesaj kaydında ara (`case_id`, `actor_id`, `direction` süzgeçleri) |
 | `GET` `POST` | `/api/actors` | aktörler ve takma adları |
 | `POST` | `/api/actors/{id}/contacts` | bir aktöre kanal ekle |
@@ -170,7 +178,9 @@ Liste uçları (`/api/cases`, `/api/actors`, `/api/contacts`, `/api/interactions
 `extension/` klasörü Chrome / Edge / Firefox için paketlenmemiş bir MV3
 eklentisi. Bir CTI platformu sayfasındaki vaka ID'sini ya da açık olan Telegram
 Web sohbetinin `@handle`'ını alıp, sayfadan çıkmadan `/api/capture` üzerinden bir
-vakaya işler. Bkz. [extension/README.md](extension/README.md).
+vakaya işler. Bkz. [extension/README.md](extension/README.md). Hiçbir şey
+kurmadan ters arama için [extension/tools/](extension/tools/bookmarklet.js)
+içinde bir bookmarklet var.
 
 | Yakala | Bağlandı | Ters arama |
 | --- | --- | --- |

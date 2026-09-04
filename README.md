@@ -3,6 +3,7 @@
 </p>
 
 <p align="center">
+  <img src="https://github.com/gorkemguler/trackactor/actions/workflows/ci.yml/badge.svg" alt="CI">
   <img src="https://img.shields.io/badge/python-3.12%2B-3776AB?logo=python&logoColor=white" alt="Python 3.12+">
   <img src="https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
   <img src="https://img.shields.io/badge/UI-React%20%2B%20TS-3178C6?logo=react&logoColor=white" alt="React + TypeScript">
@@ -64,6 +65,10 @@ same key and resolve to the case.
 **Audit** — every change, who made it, and the before/after.
 
 ![Audit](docs/screenshots/audit.png)
+
+**Actor detail** — channels, the conversation timeline across every case, and history.
+
+![Actor detail](docs/screenshots/actor-detail.png)
 
 ## How it fits together
 
@@ -146,8 +151,11 @@ curl 'localhost:8000/api/lookup?q=https://t.me/n3tw0rm_deals'
 | `POST` | `/api/capture` | upsert a case + actor + contact + message and link them, in one call |
 | `GET` `POST` | `/api/cases` | list / create cases |
 | `GET` `PATCH` `DELETE` | `/api/cases/{id}` | one case with its actors, contacts and log |
-| `POST` | `/api/cases/{id}/links` | link an actor or contact to a case |
+| `POST` | `/api/cases/{id}/links` | link an existing actor or contact to a case |
+| `POST` | `/api/cases/{id}/contacts` | create a channel and link it in one step |
 | `POST` | `/api/cases/{id}/interactions` | log a message |
+| `GET` | `/api/cases/{id}/export` | self-contained JSON bundle for handoff |
+| `GET` | `/api/export/cases.csv`, `/api/export/interactions.csv` | flat CSV dumps |
 | `GET` | `/api/interactions?q=` | search the message log (`case_id`, `actor_id`, `direction` filters) |
 | `GET` `POST` | `/api/actors` | actors and their aliases |
 | `POST` | `/api/actors/{id}/contacts` | add a channel to an actor |
@@ -166,7 +174,9 @@ return `{ items, total, limit, offset }` and take `limit` (max 200) and `offset`
 `extension/` is an unpacked MV3 extension for Chrome / Edge / Firefox. It grabs a
 case ID off a CTI platform page, or the `@handle` of the Telegram Web chat you
 have open, and files it against a case through `/api/capture` without leaving the
-page. See [extension/README.md](extension/README.md).
+page. See [extension/README.md](extension/README.md). For lookup without
+installing anything, there's a bookmarklet in
+[extension/tools/](extension/tools/bookmarklet.js).
 
 | Capture | Saved | Lookup |
 | --- | --- | --- |
