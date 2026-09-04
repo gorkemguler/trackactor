@@ -1,0 +1,1 @@
+javascript:(function(){var BASE="http://localhost:8080";var s=window.getSelection?String(window.getSelection()).trim():"";var q=s||window.prompt("Look up in trackactor:");if(!q)return;window.open(BASE.replace(/\/+$/,"")+"/lookup?q="+encodeURIComponent(q),"_blank","noopener");})();

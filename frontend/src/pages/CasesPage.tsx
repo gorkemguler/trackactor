@@ -77,9 +77,21 @@ export default function CasesPage() {
           <h1>Cases</h1>
           <p>Each case binds an external ID to the actors and channels you engage.</p>
         </div>
-        <button className="btn" onClick={() => setShowNew(true)}>
-          + New case
-        </button>
+        <div className="row">
+          <a className="btn ghost sm" href="/api/export/cases.csv" download="trackactor-cases.csv">
+            Cases CSV
+          </a>
+          <a
+            className="btn ghost sm"
+            href="/api/export/interactions.csv"
+            download="trackactor-interactions.csv"
+          >
+            Messages CSV
+          </a>
+          <button className="btn" onClick={() => setShowNew(true)}>
+            + New case
+          </button>
+        </div>
       </div>
 
       <div className="row wrap" style={{ marginBottom: 14 }}>

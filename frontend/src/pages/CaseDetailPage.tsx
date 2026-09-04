@@ -71,6 +71,13 @@ export default function CaseDetailPage() {
               </option>
             ))}
           </select>
+          <a
+            className="btn ghost sm"
+            href={`/api/cases/${c.id}/export`}
+            download={`${c.case_id}.trackactor.json`}
+          >
+            Export
+          </a>
           <button className="btn danger sm" onClick={deleteCase}>
             Delete
           </button>
@@ -248,6 +255,7 @@ export default function CaseDetailPage() {
           caseId={Number(id)}
           actors={actors?.items ?? []}
           contacts={contacts?.items ?? []}
+          channelTypes={enums.channel_types}
           onClose={() => setShowLink(false)}
           onDone={() => {
             setShowLink(false);
@@ -276,36 +284,55 @@ function LinkModal({
   caseId,
   actors,
   contacts,
+  channelTypes,
   onClose,
   onDone,
 }: {
   caseId: number;
   actors: Actor[];
   contacts: Contact[];
+  channelTypes: string[];
   onClose: () => void;
   onDone: () => void;
 }) {
+  const [mode, setMode] = useState<"existing" | "new">("existing");
   const [actorId, setActorId] = useState<number | "">("");
   const [contactId, setContactId] = useState<number | "">("");
   const [outreach, setOutreach] = useState("");
   const [note, setNote] = useState("");
+  // new-channel fields
+  const [channelType, setChannelType] = useState(channelTypes[0] ?? "other");
+  const [value, setValue] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   async function submit() {
-    if (actorId === "" && contactId === "") {
-      setErr("Pick an actor or a contact.");
-      return;
-    }
     setSaving(true);
     setErr(null);
     try {
-      await api.post(`/cases/${caseId}/links`, {
-        actor_id: actorId === "" ? null : actorId,
-        contact_id: contactId === "" ? null : contactId,
-        outreach_handle: outreach || null,
-        note: note || null,
-      });
+      if (mode === "new") {
+        if (!value.trim()) {
+          setErr("Enter the handle or link.");
+          return;
+        }
+        await api.post(`/cases/${caseId}/contacts`, {
+          channel_type: channelType,
+          value: value.trim(),
+          actor_id: actorId === "" ? null : actorId,
+          outreach_handle: outreach || null,
+        });
+      } else {
+        if (actorId === "" && contactId === "") {
+          setErr("Pick an actor or a contact.");
+          return;
+        }
+        await api.post(`/cases/${caseId}/links`, {
+          actor_id: actorId === "" ? null : actorId,
+          contact_id: contactId === "" ? null : contactId,
+          outreach_handle: outreach || null,
+          note: note || null,
+        });
+      }
       onDone();
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -315,10 +342,46 @@ function LinkModal({
   }
 
   return (
-    <Modal title="Link actor / contact" onClose={onClose}>
+    <Modal title="Link actor / channel" onClose={onClose}>
+      <div className="tabs" style={{ marginBottom: 14 }}>
+        <button
+          className={mode === "existing" ? "active" : ""}
+          onClick={() => setMode("existing")}
+        >
+          Existing
+        </button>
+        <button className={mode === "new" ? "active" : ""} onClick={() => setMode("new")}>
+          New channel
+        </button>
+      </div>
       <ErrorNote error={err} />
+
+      {mode === "new" && (
+        <div className="row" style={{ gap: 10 }}>
+          <label className="field" style={{ flex: "0 0 130px" }}>
+            <span>Channel</span>
+            <select value={channelType} onChange={(e) => setChannelType(e.target.value)}>
+              {channelTypes.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field" style={{ flex: 1 }}>
+            <span>Handle / link</span>
+            <input
+              className="mono"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="@handle · https://t.me/handle"
+            />
+          </label>
+        </div>
+      )}
+
       <label className="field">
-        <span>Actor</span>
+        <span>Actor {mode === "new" && <span className="hint">— attribute the channel</span>}</span>
         <select
           value={actorId}
           onChange={(e) => setActorId(e.target.value ? Number(e.target.value) : "")}
@@ -331,36 +394,43 @@ function LinkModal({
           ))}
         </select>
       </label>
-      <label className="field">
-        <span>Contact / channel</span>
-        <select
-          value={contactId}
-          onChange={(e) => setContactId(e.target.value ? Number(e.target.value) : "")}
-        >
-          <option value="">—</option>
-          {contacts.map((ct) => (
-            <option key={ct.id} value={ct.id}>
-              [{ct.channel_type}] {ct.value}
-              {ct.actor_name ? ` — ${ct.actor_name}` : ""}
-            </option>
-          ))}
-        </select>
-      </label>
+
+      {mode === "existing" && (
+        <label className="field">
+          <span>Contact / channel</span>
+          <select
+            value={contactId}
+            onChange={(e) => setContactId(e.target.value ? Number(e.target.value) : "")}
+          >
+            <option value="">—</option>
+            {contacts.map((ct) => (
+              <option key={ct.id} value={ct.id}>
+                [{ct.channel_type}] {ct.value}
+                {ct.actor_name ? ` — ${ct.actor_name}` : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       <label className="field">
         <span>Our outreach handle (optional)</span>
         <input value={outreach} onChange={(e) => setOutreach(e.target.value)} />
       </label>
-      <label className="field">
-        <span>Note (optional)</span>
-        <input value={note} onChange={(e) => setNote(e.target.value)} />
-      </label>
+      {mode === "existing" && (
+        <label className="field">
+          <span>Note (optional)</span>
+          <input value={note} onChange={(e) => setNote(e.target.value)} />
+        </label>
+      )}
+
       <div className="row">
         <span className="spacer" />
         <button className="btn ghost" onClick={onClose}>
           Cancel
         </button>
         <button className="btn" disabled={saving} onClick={submit}>
-          {saving ? "…" : "Link"}
+          {saving ? "…" : mode === "new" ? "Add & link" : "Link"}
         </button>
       </div>
     </Modal>

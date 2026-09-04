@@ -56,4 +56,5 @@ src/options.*        instance URL + API key
 src/background.js    context-menu lookup
 src/content/telegram.js   reads the open chat on web.telegram.org
 src/lib/api.js       config + API calls, shared
+tools/bookmarklet.js      no-install lookup bookmarklet (edit the URL, save as a bookmark)
 ```

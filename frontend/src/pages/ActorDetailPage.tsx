@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, useApi } from "../api";
 import { useEnums } from "../App";
 import History from "../History";
-import type { Actor } from "../types";
+import type { Actor, Interaction, Page } from "../types";
 import { Badge, ErrorNote, Modal, TlpBadge, fmtDate, fmtDateTime } from "../ui";
 
 export default function ActorDetailPage() {
@@ -11,6 +11,10 @@ export default function ActorDetailPage() {
   const nav = useNavigate();
   const enums = useEnums();
   const { data: a, error, refetch } = useApi<Actor>(`/actors/${id}`, [id]);
+  const { data: timeline } = useApi<Page<Interaction>>(
+    `/interactions?actor_id=${id}&limit=100`,
+    [id],
+  );
   const [showContact, setShowContact] = useState(false);
   const [busyErr, setBusyErr] = useState<string | null>(null);
 
@@ -124,6 +128,40 @@ export default function ActorDetailPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <div className="section-title" style={{ marginTop: 0 }}>
+          Conversation timeline{timeline ? ` (${timeline.total})` : ""}
+        </div>
+        <div className="panel">
+          {timeline && timeline.items.length === 0 && (
+            <div className="muted">No messages logged with this actor yet.</div>
+          )}
+          <div className="timeline">
+            {timeline?.items.map((i) => (
+              <div className="timeline-item" key={i.id}>
+                <div>
+                  <span className={i.direction === "inbound" ? "dir-in" : "dir-out"}>
+                    {i.direction === "inbound" ? "◀ IN" : "OUT ▶"}
+                  </span>
+                  <div className="muted" style={{ fontSize: 12 }}>
+                    {fmtDateTime(i.occurred_at)}
+                  </div>
+                </div>
+                <div>
+                  <div>{i.summary}</div>
+                  <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                    <Link to={`/cases/${i.case_id}`} className="mono">
+                      {i.case_ref ?? `#${i.case_id}`}
+                    </Link>
+                    {i.contact_value && <span className="mono"> · {i.contact_value}</span>}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
