@@ -158,6 +158,7 @@ class CaseUpdate(BaseModel):
     analyst: str | None = None
     objective: str | None = None
     tags: list[str] | None = None
+    assignee_id: int | None = None
 
 
 class LinkedActor(BaseModel):
@@ -185,6 +186,8 @@ class CaseOut(ORMModel, CaseBase):
     actor_count: int = 0
     interaction_count: int = 0
     last_interaction_at: datetime | None = None
+    assignee: str | None = None
+    created_by: str | None = None
 
 
 class CaseDetail(CaseOut):
@@ -390,6 +393,49 @@ class WebhookOut(ORMModel):
     last_attempt_at: datetime | None = None
     failure_count: int
     created_at: datetime
+
+
+# --- Users / auth --------------------------------------------
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=60)
+    password: str = Field(min_length=1)
+
+
+class UserOut(ORMModel):
+    id: int
+    username: str
+    display_name: str | None = None
+    is_admin: bool
+    disabled: bool = False
+
+
+class UserCreate(BaseModel):
+    username: str = Field(min_length=1, max_length=60)
+    password: str = Field(min_length=6)
+    display_name: str | None = None
+    is_admin: bool = False
+
+
+class MetaConfig(BaseModel):
+    version: str
+    require_login: bool
+    require_key: bool
+
+
+# --- Audit ------------------------------------------------
+
+
+class AuditEventOut(ORMModel):
+    id: int
+    at: datetime
+    user_label: str
+    action: str
+    entity_type: str
+    entity_id: int | None = None
+    summary: str
+    changes: dict
 
 
 CaseDetail.model_rebuild()

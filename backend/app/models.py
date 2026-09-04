@@ -122,10 +122,14 @@ class Case(Base, TimestampMixin):
     source_url: Mapped[str | None] = mapped_column(String(500))
     status: Mapped[str] = mapped_column(String(30), default="open", index=True)
     priority: Mapped[str] = mapped_column(String(20), default="medium")
-    analyst: Mapped[str | None] = mapped_column(String(120))
+    analyst: Mapped[str | None] = mapped_column(String(120))  # free-text, kept for imports
     objective: Mapped[str | None] = mapped_column(Text)
     tags: Mapped[list[str]] = mapped_column(JSON, default=list)
+    assignee_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 
+    assignee: Mapped["User | None"] = relationship(foreign_keys=[assignee_id])
+    created_by: Mapped["User | None"] = relationship(foreign_keys=[created_by_id])
     actor_links: Mapped[list[CaseActor]] = relationship(
         back_populates="case", cascade="all, delete-orphan"
     )
@@ -182,3 +186,40 @@ class Webhook(Base):
     last_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     failure_count: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(60), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    display_name: Mapped[str | None] = mapped_column(String(120))
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    disabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class Session(Base):
+    __tablename__ = "sessions"
+
+    token: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    user: Mapped[User] = relationship()
+
+
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    user_label: Mapped[str] = mapped_column(String(120), default="anon")  # survives user deletion
+    action: Mapped[str] = mapped_column(String(20))  # create | update | delete
+    entity_type: Mapped[str] = mapped_column(String(30), index=True)
+    entity_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    summary: Mapped[str] = mapped_column(String(255), default="")
+    changes: Mapped[dict] = mapped_column(JSON, default=dict)

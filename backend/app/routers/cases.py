@@ -4,13 +4,15 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from .. import events, models, schemas
 from ..activity import touch_seen
+from ..audit import diff, record
 from ..database import get_db
+from ..security import current_user
 from ..serializers import case_detail, case_out, interaction_out
 
 router = APIRouter(prefix="/api/cases", tags=["cases"])
@@ -21,6 +23,8 @@ _DETAIL_OPTS = (
     .selectinload(models.CaseContact.contact)
     .selectinload(models.Contact.actor),
     selectinload(models.Case.interactions).selectinload(models.Interaction.contact),
+    selectinload(models.Case.assignee),
+    selectinload(models.Case.created_by),
 )
 
 
@@ -58,6 +62,8 @@ def list_cases(
         stmt.options(
             selectinload(models.Case.actor_links),
             selectinload(models.Case.interactions),
+            selectinload(models.Case.assignee),
+            selectinload(models.Case.created_by),
         )
         .order_by(models.Case.updated_at.desc())
         .limit(limit)
@@ -71,7 +77,9 @@ def list_cases(
 def create_case(
     payload: schemas.CaseCreate,
     background: BackgroundTasks,
+    request: Request,
     db: Session = Depends(get_db),
+    user: models.User | None = Depends(current_user),
 ):
     if db.scalar(select(models.Case).where(models.Case.case_id == payload.case_id)):
         raise HTTPException(status_code=409, detail="case_id already exists")
@@ -86,6 +94,7 @@ def create_case(
         analyst=payload.analyst,
         objective=payload.objective,
         tags=payload.tags,
+        created_by_id=user.id if user else None,
     )
     for actor_id in dict.fromkeys(payload.actor_ids):
         if db.get(models.Actor, actor_id) is None:
@@ -97,6 +106,8 @@ def create_case(
         case.contact_links.append(models.CaseContact(contact_id=contact_id))
 
     db.add(case)
+    db.flush()
+    record(db, request, action="create", entity_type="case", entity_id=case.id, summary=case.case_id)
     db.commit()
     loaded = _load(db, case.id)
     events.emit(background, "case.created", events.payload(loaded))
@@ -113,6 +124,7 @@ def update_case(
     case_id: int,
     payload: schemas.CaseUpdate,
     background: BackgroundTasks,
+    request: Request,
     db: Session = Depends(get_db),
 ):
     case = _load(db, case_id)
@@ -121,8 +133,18 @@ def update_case(
     if "case_id" in data and data["case_id"] != case.case_id:
         if db.scalar(select(models.Case).where(models.Case.case_id == data["case_id"])):
             raise HTTPException(status_code=409, detail="case_id already exists")
+    if "assignee_id" in data and data["assignee_id"] is not None:
+        if db.get(models.User, data["assignee_id"]) is None:
+            raise HTTPException(status_code=404, detail="assignee_id not found")
+    before = {k: getattr(case, k) for k in data}
     for key, value in data.items():
         setattr(case, key, value)
+    changes = diff(before, data)
+    if changes:
+        record(
+            db, request, action="update", entity_type="case", entity_id=case.id,
+            summary=", ".join(changes), changes=changes,
+        )
     db.commit()
     if case.status != status_before:
         events.emit(background, "case.status_changed", events.payload(_load(db, case_id)))
@@ -130,10 +152,11 @@ def update_case(
 
 
 @router.delete("/{case_id}", status_code=204)
-def delete_case(case_id: int, db: Session = Depends(get_db)):
+def delete_case(case_id: int, request: Request, db: Session = Depends(get_db)):
     case = db.get(models.Case, case_id)
     if case is None:
         raise HTTPException(status_code=404, detail="Case not found")
+    record(db, request, action="delete", entity_type="case", entity_id=case.id, summary=case.case_id)
     db.delete(case)
     db.commit()
 
@@ -142,7 +165,12 @@ def delete_case(case_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{case_id}/links", response_model=schemas.CaseDetail, status_code=201)
-def add_link(case_id: int, payload: schemas.CaseLinkRequest, db: Session = Depends(get_db)):
+def add_link(
+    case_id: int,
+    payload: schemas.CaseLinkRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     case = _load(db, case_id)
     if payload.actor_id is None and payload.contact_id is None:
         raise HTTPException(status_code=422, detail="actor_id or contact_id is required")
@@ -167,26 +195,45 @@ def add_link(case_id: int, payload: schemas.CaseLinkRequest, db: Session = Depen
                 )
             )
 
+    parts = []
+    if payload.actor_id is not None:
+        parts.append(f"actor {payload.actor_id}")
+    if payload.contact_id is not None:
+        parts.append(f"contact {payload.contact_id}")
+    record(
+        db, request, action="update", entity_type="case", entity_id=case.id,
+        summary=f"linked {' + '.join(parts)}",
+    )
     db.commit()
     return case_detail(_load(db, case_id))
 
 
 @router.delete("/{case_id}/links/actor/{actor_id}", response_model=schemas.CaseDetail)
-def remove_actor_link(case_id: int, actor_id: int, db: Session = Depends(get_db)):
+def remove_actor_link(case_id: int, actor_id: int, request: Request, db: Session = Depends(get_db)):
     case = _load(db, case_id)
     for link in list(case.actor_links):
         if link.actor_id == actor_id:
             db.delete(link)
+    record(
+        db, request, action="update", entity_type="case", entity_id=case.id,
+        summary=f"unlinked actor {actor_id}",
+    )
     db.commit()
     return case_detail(_load(db, case_id))
 
 
 @router.delete("/{case_id}/links/contact/{contact_id}", response_model=schemas.CaseDetail)
-def remove_contact_link(case_id: int, contact_id: int, db: Session = Depends(get_db)):
+def remove_contact_link(
+    case_id: int, contact_id: int, request: Request, db: Session = Depends(get_db)
+):
     case = _load(db, case_id)
     for link in list(case.contact_links):
         if link.contact_id == contact_id:
             db.delete(link)
+    record(
+        db, request, action="update", entity_type="case", entity_id=case.id,
+        summary=f"unlinked contact {contact_id}",
+    )
     db.commit()
     return case_detail(_load(db, case_id))
 
@@ -207,6 +254,7 @@ def add_interaction(
     case_id: int,
     payload: schemas.InteractionCreate,
     background: BackgroundTasks,
+    request: Request,
     db: Session = Depends(get_db),
 ):
     case = db.get(models.Case, case_id)
@@ -235,6 +283,11 @@ def add_interaction(
     if status_changed:
         case.status = "responded"
 
+    db.flush()
+    record(
+        db, request, action="update", entity_type="case", entity_id=case.id,
+        summary=f"logged {interaction.direction} message",
+    )
     db.commit()
     db.refresh(interaction)
 
@@ -270,9 +323,15 @@ def update_interaction(
 
 
 @router.delete("/{case_id}/interactions/{interaction_id}", status_code=204)
-def delete_interaction(case_id: int, interaction_id: int, db: Session = Depends(get_db)):
+def delete_interaction(
+    case_id: int, interaction_id: int, request: Request, db: Session = Depends(get_db)
+):
     interaction = db.get(models.Interaction, interaction_id)
     if interaction is None or interaction.case_id != case_id:
         raise HTTPException(status_code=404, detail="Interaction not found")
+    record(
+        db, request, action="update", entity_type="case", entity_id=case_id,
+        summary=f"deleted {interaction.direction} message",
+    )
     db.delete(interaction)
     db.commit()

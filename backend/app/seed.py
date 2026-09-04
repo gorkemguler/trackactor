@@ -10,8 +10,9 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 
 from .database import SessionLocal, init_db
-from .models import Actor, Case, CaseActor, CaseContact, Contact, Interaction
+from .models import Actor, Case, CaseActor, CaseContact, Contact, Interaction, User
 from .normalize import normalize_identifier
+from .security import hash_password
 
 now = datetime.now(timezone.utc)
 
@@ -33,6 +34,18 @@ def seed(force=False):
             for model in (Interaction, CaseContact, CaseActor, Contact, Case, Actor):
                 db.query(model).delete()
             db.commit()
+
+        if not db.scalar(select(User).limit(1)):
+            db.add(
+                User(
+                    username="analyst",
+                    password_hash=hash_password("analyst"),
+                    display_name="Demo Analyst",
+                    is_admin=True,
+                )
+            )
+            db.commit()
+            print("Created demo user analyst / analyst (admin).")
 
         if db.scalar(select(Case).limit(1)):
             print("Database already has data; use --force to reseed.")

@@ -44,6 +44,8 @@ def case_out(case: models.Case) -> schemas.CaseOut:
         actor_count=len(case.actor_links),
         interaction_count=len(case.interactions),
         last_interaction_at=_last_interaction_at(case),
+        assignee=case.assignee.username if case.assignee else None,
+        created_by=case.created_by.username if case.created_by else None,
     )
 
 

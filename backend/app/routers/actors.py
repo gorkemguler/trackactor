@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from .. import models, schemas
+from ..audit import diff, record
 from ..database import get_db
 from ..normalize import normalize_identifier
 from ..serializers import actor_detail, contact_out
@@ -61,7 +62,9 @@ def list_actors(
 
 
 @router.post("", response_model=schemas.ActorDetail, status_code=201)
-def create_actor(payload: schemas.ActorCreate, db: Session = Depends(get_db)):
+def create_actor(
+    payload: schemas.ActorCreate, request: Request, db: Session = Depends(get_db)
+):
     if db.scalar(select(models.Actor).where(models.Actor.name == payload.name)):
         raise HTTPException(status_code=409, detail="An actor with that name already exists")
 
@@ -86,6 +89,11 @@ def create_actor(payload: schemas.ActorCreate, db: Session = Depends(get_db)):
             )
         )
     db.add(actor)
+    db.flush()
+    record(
+        db, request, action="create", entity_type="actor", entity_id=actor.id,
+        summary=actor.name,
+    )
     db.commit()
     db.refresh(actor)
     return actor_detail(_get_actor(db, actor.id))
@@ -97,23 +105,36 @@ def get_actor(actor_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{actor_id}", response_model=schemas.ActorDetail)
-def update_actor(actor_id: int, payload: schemas.ActorUpdate, db: Session = Depends(get_db)):
+def update_actor(
+    actor_id: int, payload: schemas.ActorUpdate, request: Request, db: Session = Depends(get_db)
+):
     actor = _get_actor(db, actor_id)
     data = payload.model_dump(exclude_unset=True)
     if "name" in data and data["name"] != actor.name:
         if db.scalar(select(models.Actor).where(models.Actor.name == data["name"])):
             raise HTTPException(status_code=409, detail="An actor with that name already exists")
+    before = {k: getattr(actor, k) for k in data}
     for key, value in data.items():
         setattr(actor, key, value)
+    changes = diff(before, data)
+    if changes:
+        record(
+            db, request, action="update", entity_type="actor", entity_id=actor.id,
+            summary=", ".join(changes), changes=changes,
+        )
     db.commit()
     return actor_detail(_get_actor(db, actor_id))
 
 
 @router.delete("/{actor_id}", status_code=204)
-def delete_actor(actor_id: int, db: Session = Depends(get_db)):
+def delete_actor(actor_id: int, request: Request, db: Session = Depends(get_db)):
     actor = db.get(models.Actor, actor_id)
     if actor is None:
         raise HTTPException(status_code=404, detail="Actor not found")
+    record(
+        db, request, action="delete", entity_type="actor", entity_id=actor.id,
+        summary=actor.name,
+    )
     db.delete(actor)
     db.commit()
 

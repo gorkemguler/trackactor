@@ -12,6 +12,8 @@ from .config import settings
 from .database import init_db
 from .routers import (
     actors,
+    audit,
+    auth,
     capture,
     cases,
     contacts,
@@ -19,6 +21,7 @@ from .routers import (
     keys,
     lookup,
     stats,
+    users,
     webhooks,
 )
 from .security import auth_gate
@@ -50,6 +53,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(cases.router)
 app.include_router(actors.router)
 app.include_router(contacts.router)
@@ -57,8 +61,10 @@ app.include_router(interactions.router)
 app.include_router(lookup.router)
 app.include_router(capture.router)
 app.include_router(stats.router)
+app.include_router(audit.router)
 app.include_router(keys.router)
 app.include_router(webhooks.router)
+app.include_router(users.router)
 
 
 @app.get("/api/health", tags=["meta"])
@@ -77,4 +83,14 @@ def enums():
         "case_statuses": schemas.CASE_STATUSES,
         "priorities": schemas.PRIORITIES,
         "directions": schemas.DIRECTIONS,
+    }
+
+
+@app.get("/api/meta/config", tags=["meta"], response_model=None)
+def meta_config():
+    """What the frontend needs to know before it renders."""
+    return {
+        "version": __version__,
+        "require_login": settings.require_login,
+        "require_key": settings.require_key,
     }

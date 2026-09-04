@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     # a fresh clone runs with no setup.
     require_key: bool = False
 
+    # When true, /api needs a logged-in session cookie (an X-API-Key still works
+    # too, for automation).
+    require_login: bool = False
+    session_ttl_hours: int = 12
+
     # Guards the /api/keys and /api/webhooks management routes. When empty those
     # routes are open (fine for a local instance); set it once you expose them.
     admin_token: str = ""
